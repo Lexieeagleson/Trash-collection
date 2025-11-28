@@ -452,18 +452,30 @@ function drawRaccoon() {
     ctx.arc(x + w * 0.48, y + h * 0.205, w * 0.015, 0, Math.PI * 2);
     ctx.fill();
     
-    // Mouth / smile
-    ctx.strokeStyle = '#3a3a3a';
-    ctx.lineWidth = 2 * scale;
-    ctx.beginPath();
-    ctx.arc(x + w * 0.5, y + h * 0.22, w * 0.08, 0.2, Math.PI - 0.2);
-    ctx.stroke();
-    
     // White muzzle
     ctx.fillStyle = '#d0d0d0';
     ctx.beginPath();
     ctx.ellipse(x + w * 0.5, y + h * 0.24, w * 0.12, h * 0.05, 0, 0, Math.PI * 2);
     ctx.fill();
+    
+    // Mouth / smile (drawn after muzzle so it's visible)
+    ctx.strokeStyle = '#3a3a3a';
+    ctx.lineWidth = 2.5 * scale;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.5, y + h * 0.22, w * 0.06, 0.3, Math.PI - 0.3);
+    ctx.stroke();
+    
+    // Add cute smile lines at corners
+    ctx.lineWidth = 2 * scale;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.42, y + h * 0.25);
+    ctx.lineTo(x + w * 0.44, y + h * 0.27);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.58, y + h * 0.25);
+    ctx.lineTo(x + w * 0.56, y + h * 0.27);
+    ctx.stroke();
     
     // Arms holding can
     ctx.fillStyle = '#7a7a7a';
