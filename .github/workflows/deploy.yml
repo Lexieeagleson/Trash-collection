@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main", "copilot/add-garbage-catching-game"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:

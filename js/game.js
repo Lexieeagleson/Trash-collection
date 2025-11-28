@@ -16,6 +16,27 @@ const game = {
     difficultyInterval: 10000
 };
 
+// Polyfill for roundRect if not supported
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+        if (typeof radius === 'number') {
+            radius = { tl: radius, tr: radius, br: radius, bl: radius };
+        }
+        const r = radius;
+        this.moveTo(x + r.tl, y);
+        this.lineTo(x + width - r.tr, y);
+        this.quadraticCurveTo(x + width, y, x + width, y + r.tr);
+        this.lineTo(x + width, y + height - r.br);
+        this.quadraticCurveTo(x + width, y + height, x + width - r.br, y + height);
+        this.lineTo(x + r.bl, y + height);
+        this.quadraticCurveTo(x, y + height, x, y + height - r.bl);
+        this.lineTo(x, y + r.tl);
+        this.quadraticCurveTo(x, y, x + r.tl, y);
+        this.closePath();
+        return this;
+    };
+}
+
 // Raccoon player
 const raccoon = {
     x: 0,
