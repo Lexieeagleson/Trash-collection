@@ -458,23 +458,37 @@ function drawRaccoon() {
     ctx.ellipse(x + w * 0.5, y + h * 0.24, w * 0.12, h * 0.05, 0, 0, Math.PI * 2);
     ctx.fill();
     
-    // Mouth / smile (drawn after muzzle so it's visible)
-    ctx.strokeStyle = '#3a3a3a';
-    ctx.lineWidth = 2.5 * scale;
+    // Whiskers
+    ctx.strokeStyle = '#4a4a4a';
+    ctx.lineWidth = 1.5 * scale;
     ctx.lineCap = 'round';
+    
+    // Left whiskers
     ctx.beginPath();
-    ctx.arc(x + w * 0.5, y + h * 0.22, w * 0.06, 0.3, Math.PI - 0.3);
+    ctx.moveTo(x + w * 0.38, y + h * 0.22);
+    ctx.lineTo(x + w * 0.2, y + h * 0.20);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.38, y + h * 0.24);
+    ctx.lineTo(x + w * 0.18, y + h * 0.24);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.38, y + h * 0.26);
+    ctx.lineTo(x + w * 0.2, y + h * 0.28);
     ctx.stroke();
     
-    // Add cute smile lines at corners
-    ctx.lineWidth = 2 * scale;
+    // Right whiskers
     ctx.beginPath();
-    ctx.moveTo(x + w * 0.42, y + h * 0.25);
-    ctx.lineTo(x + w * 0.44, y + h * 0.27);
+    ctx.moveTo(x + w * 0.62, y + h * 0.22);
+    ctx.lineTo(x + w * 0.8, y + h * 0.20);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x + w * 0.58, y + h * 0.25);
-    ctx.lineTo(x + w * 0.56, y + h * 0.27);
+    ctx.moveTo(x + w * 0.62, y + h * 0.24);
+    ctx.lineTo(x + w * 0.82, y + h * 0.24);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.62, y + h * 0.26);
+    ctx.lineTo(x + w * 0.8, y + h * 0.28);
     ctx.stroke();
     
     // Arms holding can
