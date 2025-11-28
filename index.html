@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Trash Catcher - Raccoon Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="start-screen">
+            <h1>🦝 Trash Catcher</h1>
+            <p>Help the raccoon catch falling trash!</p>
+            <p class="instructions">Slide left and right to move</p>
+            <button id="start-btn">Start Game</button>
+        </div>
+        <div id="game-screen" class="hidden">
+            <div id="score-display">Score: <span id="score">0</span></div>
+            <div id="lives-display">Lives: <span id="lives">3</span></div>
+            <canvas id="game-canvas"></canvas>
+        </div>
+        <div id="game-over-screen" class="hidden">
+            <h1>Game Over!</h1>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button id="restart-btn">Play Again</button>
+        </div>
+    </div>
+    <script src="js/game.js"></script>
+</body>
+</html>

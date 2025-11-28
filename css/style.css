@@ -1,0 +1,154 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Comic Sans MS', 'Chalkboard', 'Marker Felt', sans-serif;
+    background: linear-gradient(135deg, #2c5530 0%, #1a3d1f 100%);
+    min-height: 100vh;
+    overflow: hidden;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#start-screen,
+#game-over-screen {
+    text-align: center;
+    color: white;
+    padding: 30px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 20px;
+    max-width: 90%;
+}
+
+#start-screen h1,
+#game-over-screen h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#start-screen p {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+}
+
+.instructions {
+    font-size: 1rem !important;
+    color: #aaffaa;
+    font-style: italic;
+}
+
+button {
+    background: linear-gradient(180deg, #ff9800 0%, #f57c00 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.3rem;
+    border-radius: 30px;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 10px;
+}
+
+button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+#game-screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#score-display,
+#lives-display {
+    position: absolute;
+    top: 15px;
+    color: white;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 15px;
+    border-radius: 20px;
+}
+
+#score-display {
+    left: 15px;
+}
+
+#lives-display {
+    right: 15px;
+}
+
+#game-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#game-over-screen {
+    position: absolute;
+    z-index: 100;
+}
+
+#final-score {
+    font-size: 2rem;
+    color: #ffcc00;
+}
+
+@media (max-width: 600px) {
+    #start-screen h1,
+    #game-over-screen h1 {
+        font-size: 2rem;
+    }
+    
+    #start-screen p {
+        font-size: 1rem;
+    }
+    
+    button {
+        padding: 12px 30px;
+        font-size: 1.1rem;
+    }
+    
+    #score-display,
+    #lives-display {
+        font-size: 1rem;
+        padding: 6px 12px;
+        top: 10px;
+    }
+    
+    #score-display {
+        left: 10px;
+    }
+    
+    #lives-display {
+        right: 10px;
+    }
+}
