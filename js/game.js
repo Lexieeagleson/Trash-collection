@@ -811,22 +811,22 @@ function drawRaccoonArms() {
     
     // Arms holding can (drawn in front of trash can)
     ctx.fillStyle = colors.arm;
-    // Left arm
+    // Left arm - shorter and positioned to grip trash can
     ctx.beginPath();
-    ctx.ellipse(x + w * 0.18, y + h * 0.45, w * 0.08, h * 0.12, -0.5, 0, Math.PI * 2);
+    ctx.ellipse(x + w * 0.22, y + h * 0.48, w * 0.07, h * 0.08, -0.4, 0, Math.PI * 2);
     ctx.fill();
-    // Right arm  
+    // Right arm - shorter and positioned to grip trash can
     ctx.beginPath();
-    ctx.ellipse(x + w * 0.82, y + h * 0.45, w * 0.08, h * 0.12, 0.5, 0, Math.PI * 2);
+    ctx.ellipse(x + w * 0.78, y + h * 0.48, w * 0.07, h * 0.08, 0.4, 0, Math.PI * 2);
     ctx.fill();
     
     // Paws (gripping the trash can)
     ctx.fillStyle = colors.paw;
     ctx.beginPath();
-    ctx.ellipse(x + w * 0.12, y + h * 0.52, w * 0.06, h * 0.04, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(x + w * 0.17, y + h * 0.52, w * 0.05, h * 0.035, -0.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(x + w * 0.88, y + h * 0.52, w * 0.06, h * 0.04, 0.3, 0, Math.PI * 2);
+    ctx.ellipse(x + w * 0.83, y + h * 0.52, w * 0.05, h * 0.035, 0.3, 0, Math.PI * 2);
     ctx.fill();
 }
 
