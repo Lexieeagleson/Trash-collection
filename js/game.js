@@ -395,14 +395,15 @@ function activateGoldenBoost() {
 }
 
 function checkCollision(trash) {
-    // Collision box for the garbage can (lower part of raccoon sprite)
+    // Collision zone covers the entire raccoon sprite
     const catchZone = {
-        x: raccoon.x + raccoon.width * 0.1,
-        y: raccoon.y + raccoon.height * 0.4,
-        width: raccoon.width * 0.8,
-        height: raccoon.height * 0.6
+        x: raccoon.x,
+        y: raccoon.y,
+        width: raccoon.width,
+        height: raccoon.height
     };
     
+    // Trash is caught when it intersects with any part of the raccoon
     return trash.x < catchZone.x + catchZone.width &&
            trash.x + trash.width > catchZone.x &&
            trash.y < catchZone.y + catchZone.height &&
