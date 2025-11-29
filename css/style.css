@@ -76,36 +76,16 @@ button:active {
 
 #game-screen {
     position: relative;
-    width: 100%;
-    height: 100%;
-}
-
-#score-display,
-#lives-display {
-    position: absolute;
-    top: 15px;
-    color: white;
-    font-size: 1.3rem;
-    font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-    z-index: 10;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 8px 15px;
-    border-radius: 20px;
-}
-
-#score-display {
-    left: 15px;
-}
-
-#lives-display {
-    right: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 #game-canvas {
     display: block;
-    width: 100%;
-    height: 100%;
+    border: 3px solid #4a8f4a;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(74, 143, 74, 0.5);
 }
 
 .hidden {
@@ -135,20 +115,5 @@ button:active {
     button {
         padding: 12px 30px;
         font-size: 1.1rem;
-    }
-    
-    #score-display,
-    #lives-display {
-        font-size: 1rem;
-        padding: 6px 12px;
-        top: 10px;
-    }
-    
-    #score-display {
-        left: 10px;
-    }
-    
-    #lives-display {
-        right: 10px;
     }
 }

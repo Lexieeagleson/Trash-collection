@@ -6,6 +6,7 @@ const game = {
     height: 0,
     score: 0,
     lives: 3,
+    level: 1,
     isRunning: false,
     animationId: null,
     lastTime: 0,
@@ -13,7 +14,22 @@ const game = {
     spawnInterval: 1500,
     minSpawnInterval: 600,
     difficultyTimer: 0,
-    difficultyInterval: 10000
+    difficultyInterval: 10000,
+    // Level progression settings
+    pointsPerLevel: 100,
+    // Window sizing - starts smaller and expands
+    baseWindowWidth: 300,
+    baseWindowHeight: 400,
+    windowExpansionPerTenLevels: 20,
+    // Trash can sizing - starts large and shrinks
+    baseRaccoonWidth: 120,
+    minRaccoonWidth: 60,
+    raccoonShrinkPerLevel: 5,
+    maxRaccoonWidthRatio: 0.45,
+    // Trash speed - starts slow and increases
+    baseTrashSpeed: 1,
+    trashSpeedIncreasePerLevel: 0.15,
+    maxTrashSpeed: 5
 };
 
 // Polyfill for roundRect if not supported
@@ -66,7 +82,7 @@ const trashTypes = [
 
 // DOM elements
 let startScreen, gameScreen, gameOverScreen;
-let scoreDisplay, livesDisplay, finalScore;
+let finalScore;
 
 // Touch/mouse tracking
 let touchStartX = 0;
@@ -77,8 +93,6 @@ function init() {
     startScreen = document.getElementById('start-screen');
     gameScreen = document.getElementById('game-screen');
     gameOverScreen = document.getElementById('game-over-screen');
-    scoreDisplay = document.getElementById('score');
-    livesDisplay = document.getElementById('lives');
     finalScore = document.getElementById('final-score');
     
     game.canvas = document.getElementById('game-canvas');
@@ -97,13 +111,26 @@ function init() {
 }
 
 function resizeCanvas() {
-    game.canvas.width = window.innerWidth;
-    game.canvas.height = window.innerHeight;
+    // Calculate window expansion based on level (every 10 levels, expand by 20px)
+    const levelExpansion = Math.floor((game.level - 1) / 10) * game.windowExpansionPerTenLevels;
+    const targetWidth = game.baseWindowWidth + levelExpansion;
+    const targetHeight = game.baseWindowHeight + levelExpansion;
+    
+    // Use the smaller of target size or window size
+    const maxWidth = Math.min(targetWidth, window.innerWidth);
+    const maxHeight = Math.min(targetHeight, window.innerHeight);
+    
+    game.canvas.width = maxWidth;
+    game.canvas.height = maxHeight;
     game.width = game.canvas.width;
     game.height = game.canvas.height;
     
-    // Update raccoon position
-    raccoon.width = Math.min(80, game.width * 0.15);
+    // Calculate raccoon size based on level (starts large, shrinks with level)
+    const baseSizeForLevel = game.baseRaccoonWidth - (game.level - 1) * game.raccoonShrinkPerLevel;
+    const levelRaccoonWidth = Math.max(game.minRaccoonWidth, baseSizeForLevel);
+    
+    // Update raccoon position and size (cap at configured ratio of game width)
+    raccoon.width = Math.min(levelRaccoonWidth, game.width * game.maxRaccoonWidthRatio);
     raccoon.height = raccoon.width * 1.25;
     raccoon.y = game.height - raccoon.height - 20;
     
@@ -175,11 +202,15 @@ function startGame() {
     
     game.score = 0;
     game.lives = 3;
+    game.level = 1;
     game.isRunning = true;
     game.spawnInterval = 1500;
     game.spawnTimer = 0;
     game.difficultyTimer = 0;
     trashItems = [];
+    
+    // Reset canvas size for level 1
+    resizeCanvas();
     
     raccoon.x = (game.width - raccoon.width) / 2;
     raccoon.targetX = raccoon.x;
@@ -206,6 +237,18 @@ function gameLoop(currentTime = 0) {
 }
 
 function update(deltaTime) {
+    // Check for level up based on score
+    const newLevel = Math.floor(game.score / game.pointsPerLevel) + 1;
+    if (newLevel !== game.level) {
+        game.level = newLevel;
+        // Resize canvas and update raccoon size for new level
+        resizeCanvas();
+        // Constrain raccoon position to new boundaries
+        constrainRaccoon();
+        raccoon.x = Math.max(0, Math.min(game.width - raccoon.width, raccoon.x));
+        updateUI();
+    }
+    
     // Smooth raccoon movement
     const dx = raccoon.targetX - raccoon.x;
     raccoon.x += dx * raccoon.speed * Math.min(deltaTime / 16, 2);
@@ -255,12 +298,16 @@ function spawnTrash() {
     const type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
     const size = 35 + Math.random() * 15;
     
+    // Calculate trash speed based on level (starts slow, increases with level)
+    const levelSpeed = game.baseTrashSpeed + (game.level - 1) * game.trashSpeedIncreasePerLevel;
+    const baseSpeed = Math.min(levelSpeed, game.maxTrashSpeed);
+    
     trashItems.push({
         x: Math.random() * (game.width - size),
         y: -size,
         width: size,
         height: size,
-        speed: 2 + Math.random() * 2 + (game.score / 500),
+        speed: baseSpeed + Math.random() * 1,
         emoji: type.emoji,
         points: type.points,
         rotation: Math.random() * Math.PI * 2,
@@ -327,6 +374,40 @@ function render() {
     
     // Draw raccoon
     drawRaccoon();
+    
+    // Draw HUD on canvas
+    drawHUD();
+}
+
+function drawHUD() {
+    const ctx = game.ctx;
+    const fontSize = Math.max(12, Math.min(16, game.width / 20));
+    
+    ctx.font = `bold ${fontSize}px 'Comic Sans MS', sans-serif`;
+    ctx.textBaseline = 'top';
+    
+    // Draw score (left)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(5, 5, 80, 25);
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Score: ${game.score}`, 10, 10);
+    
+    // Draw level (center)
+    const levelText = `Lvl: ${game.level}`;
+    const levelWidth = ctx.measureText(levelText).width + 16;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect((game.width - levelWidth) / 2, 5, levelWidth, 25);
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.fillText(levelText, game.width / 2, 10);
+    
+    // Draw lives (right)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(game.width - 75, 5, 70, 25);
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'right';
+    ctx.fillText(`Lives: ${game.lives}`, game.width - 10, 10);
 }
 
 function drawStars() {
@@ -530,8 +611,9 @@ function drawRaccoon() {
 }
 
 function updateUI() {
-    scoreDisplay.textContent = game.score;
-    livesDisplay.textContent = game.lives;
+    // HUD is now drawn on canvas in drawHUD()
+    // This function is kept for compatibility but may be used 
+    // for other UI updates if needed
 }
 
 function gameOver() {
