@@ -405,11 +405,17 @@ function checkCollision(trash) {
         height: raccoon.height * 0.25
     };
     
-    // Trash is caught when its bottom edge intersects or makes contact with the top of the head
-    return trash.x < catchZone.x + catchZone.width &&
-           trash.x + trash.width > catchZone.x &&
-           trash.y + trash.height >= catchZone.y &&
-           trash.y + trash.height <= catchZone.y + catchZone.height;
+    // Trash is caught when it intersects or makes contact with the top of the raccoon's head
+    // Check horizontal overlap
+    const horizontalOverlap = trash.x < catchZone.x + catchZone.width &&
+                              trash.x + trash.width > catchZone.x;
+    
+    // Check if trash's bottom edge has reached or is within the head zone
+    // This ensures trash is caught when it contacts the top of the head
+    const verticalContact = trash.y + trash.height >= catchZone.y &&
+                            trash.y < catchZone.y + catchZone.height;
+    
+    return horizontalOverlap && verticalContact;
 }
 
 function render() {
