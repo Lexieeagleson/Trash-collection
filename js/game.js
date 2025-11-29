@@ -28,7 +28,10 @@ const game = {
     // Trash speed - starts slow and increases
     baseTrashSpeed: 1,
     trashSpeedIncreasePerLevel: 0.15,
-    maxTrashSpeed: 5
+    maxTrashSpeed: 5,
+    // Golden trash settings
+    goldenTrashMinLevel: 10,
+    goldenTrashSpawnChance: 0.05 // 5% chance per spawn after level 10
 };
 
 // Polyfill for roundRect if not supported
@@ -59,7 +62,13 @@ const raccoon = {
     width: 80,
     height: 100,
     targetX: 0,
-    speed: 0.15
+    speed: 0.15,
+    // Golden boost state
+    isGolden: false,
+    goldenTimer: 0,
+    goldenDuration: 15000, // 15 seconds in milliseconds
+    normalSpeed: 0.15,
+    goldenSpeedMultiplier: 1.5 // 50% speed boost
 };
 
 // Trash items
@@ -78,6 +87,13 @@ const trashTypes = [
     { emoji: '🧃', points: 15 },
     { emoji: '🥡', points: 20 }
 ];
+
+// Golden trash (special item after level 10)
+const goldenTrashType = {
+    emoji: '⭐',
+    points: 50,
+    isGolden: true
+};
 
 // DOM elements
 let startScreen, gameScreen, gameOverScreen;
@@ -218,6 +234,11 @@ function startGame() {
     game.difficultyTimer = 0;
     trashItems = [];
     
+    // Reset golden boost state
+    raccoon.isGolden = false;
+    raccoon.goldenTimer = 0;
+    raccoon.speed = raccoon.normalSpeed;
+    
     // Reset canvas size for level 1
     resizeCanvas();
     
@@ -258,6 +279,17 @@ function update(deltaTime) {
         updateUI();
     }
     
+    // Update golden boost timer
+    if (raccoon.isGolden) {
+        raccoon.goldenTimer -= deltaTime;
+        if (raccoon.goldenTimer <= 0) {
+            // Golden boost expired
+            raccoon.isGolden = false;
+            raccoon.goldenTimer = 0;
+            raccoon.speed = raccoon.normalSpeed;
+        }
+    }
+    
     // Smooth raccoon movement
     const dx = raccoon.targetX - raccoon.x;
     raccoon.x += dx * raccoon.speed * Math.min(deltaTime / 16, 2);
@@ -284,6 +316,10 @@ function update(deltaTime) {
         // Check collision with raccoon
         if (checkCollision(trash)) {
             game.score += trash.points;
+            // Check if this is golden trash
+            if (trash.isGolden) {
+                activateGoldenBoost();
+            }
             updateUI();
             trashItems.splice(i, 1);
             continue;
@@ -304,8 +340,18 @@ function update(deltaTime) {
 }
 
 function spawnTrash() {
-    const type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
-    const size = 35 + Math.random() * 15;
+    // Determine if this should be golden trash (after level 10, with small chance)
+    let type;
+    let isGoldenTrash = false;
+    
+    if (game.level > game.goldenTrashMinLevel && Math.random() < game.goldenTrashSpawnChance) {
+        type = goldenTrashType;
+        isGoldenTrash = true;
+    } else {
+        type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
+    }
+    
+    const size = isGoldenTrash ? 45 : 35 + Math.random() * 15; // Golden trash is slightly larger
     
     // Calculate trash speed based on level (starts slow, increases with level)
     const levelSpeed = game.baseTrashSpeed + (game.level - 1) * game.trashSpeedIncreasePerLevel;
@@ -320,8 +366,16 @@ function spawnTrash() {
         emoji: type.emoji,
         points: type.points,
         rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.1
+        rotationSpeed: (Math.random() - 0.5) * 0.1,
+        isGolden: isGoldenTrash
     });
+}
+
+// Activate the golden boost when golden trash is collected
+function activateGoldenBoost() {
+    raccoon.isGolden = true;
+    raccoon.goldenTimer = raccoon.goldenDuration;
+    raccoon.speed = raccoon.normalSpeed * raccoon.goldenSpeedMultiplier;
 }
 
 function checkCollision(trash) {
@@ -368,6 +422,11 @@ function render() {
         game.ctx.fill();
     }
     
+    // Draw golden glow behind raccoon if active
+    if (raccoon.isGolden) {
+        drawGoldenGlow();
+    }
+    
     // Draw trash can first (behind trash items)
     drawTrashCan();
     
@@ -377,10 +436,24 @@ function render() {
         game.ctx.translate(trash.x + trash.width / 2, trash.y + trash.height / 2);
         trash.rotation += trash.rotationSpeed;
         game.ctx.rotate(trash.rotation);
+        
+        // Add golden glow effect for golden trash
+        if (trash.isGolden) {
+            game.ctx.shadowColor = '#FFD700';
+            game.ctx.shadowBlur = 20;
+        }
+        
         game.ctx.font = `${trash.width}px Arial`;
         game.ctx.textAlign = 'center';
         game.ctx.textBaseline = 'middle';
         game.ctx.fillText(trash.emoji, 0, 0);
+        
+        // Reset shadow
+        if (trash.isGolden) {
+            game.ctx.shadowColor = 'transparent';
+            game.ctx.shadowBlur = 0;
+        }
+        
         game.ctx.restore();
     }
     
@@ -420,6 +493,37 @@ function drawHUD() {
     ctx.fillStyle = 'white';
     ctx.textAlign = 'right';
     ctx.fillText(`Lives: ${game.lives}`, game.width - 10, 10);
+}
+
+function drawGoldenGlow() {
+    const ctx = game.ctx;
+    const x = raccoon.x;
+    const y = raccoon.y;
+    const w = raccoon.width;
+    const h = raccoon.height;
+    
+    // Create a pulsating effect based on time
+    const pulseTime = Date.now() / 200;
+    const pulseIntensity = 0.5 + 0.3 * Math.sin(pulseTime);
+    
+    // Draw golden glow behind the raccoon
+    ctx.save();
+    
+    // Outer glow
+    const gradient = ctx.createRadialGradient(
+        x + w / 2, y + h / 2, 0,
+        x + w / 2, y + h / 2, w * 0.9
+    );
+    gradient.addColorStop(0, `rgba(255, 215, 0, ${0.6 * pulseIntensity})`);
+    gradient.addColorStop(0.5, `rgba(255, 215, 0, ${0.3 * pulseIntensity})`);
+    gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h / 2, w * 0.9, h * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
 }
 
 function drawStars() {
@@ -478,20 +582,29 @@ function drawRaccoonBody() {
     // Scale factor for consistent proportions
     const scale = w / 80;
     
+    // Golden color palette for when boost is active
+    const bodyColor = raccoon.isGolden ? '#D4A017' : '#7a7a7a';
+    const headColor = raccoon.isGolden ? '#E5B22A' : '#8a8a8a';
+    const earColor = raccoon.isGolden ? '#C49A16' : '#6a6a6a';
+    const armColor = raccoon.isGolden ? '#D4A017' : '#7a7a7a';
+    const pawColor = raccoon.isGolden ? '#B8860B' : '#5a5a5a';
+    const tailColor = raccoon.isGolden ? '#D4A017' : '#7a7a7a';
+    const tailStripeColor = raccoon.isGolden ? '#8B6914' : '#4a4a4a';
+    
     // Raccoon body
-    ctx.fillStyle = '#7a7a7a';
+    ctx.fillStyle = bodyColor;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.5, y + h * 0.38, w * 0.35, h * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
     
     // Raccoon head
-    ctx.fillStyle = '#8a8a8a';
+    ctx.fillStyle = headColor;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.5, y + h * 0.18, w * 0.32, h * 0.18, 0, 0, Math.PI * 2);
     ctx.fill();
     
     // Ears
-    ctx.fillStyle = '#6a6a6a';
+    ctx.fillStyle = earColor;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.25, y + h * 0.05, w * 0.1, h * 0.08, -0.3, 0, Math.PI * 2);
     ctx.fill();
@@ -596,7 +709,7 @@ function drawRaccoonBody() {
     ctx.stroke();
     
     // Arms holding can
-    ctx.fillStyle = '#7a7a7a';
+    ctx.fillStyle = armColor;
     // Left arm
     ctx.beginPath();
     ctx.ellipse(x + w * 0.18, y + h * 0.45, w * 0.08, h * 0.12, -0.5, 0, Math.PI * 2);
@@ -607,7 +720,7 @@ function drawRaccoonBody() {
     ctx.fill();
     
     // Paws
-    ctx.fillStyle = '#5a5a5a';
+    ctx.fillStyle = pawColor;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.12, y + h * 0.52, w * 0.06, h * 0.04, -0.3, 0, Math.PI * 2);
     ctx.fill();
@@ -616,7 +729,7 @@ function drawRaccoonBody() {
     ctx.fill();
     
     // Tail
-    ctx.fillStyle = '#7a7a7a';
+    ctx.fillStyle = tailColor;
     ctx.beginPath();
     ctx.moveTo(x + w * 0.85, y + h * 0.4);
     ctx.quadraticCurveTo(x + w * 1.1, y + h * 0.3, x + w * 1.0, y + h * 0.15);
@@ -624,7 +737,7 @@ function drawRaccoonBody() {
     ctx.fill();
     
     // Tail stripes
-    ctx.fillStyle = '#4a4a4a';
+    ctx.fillStyle = tailStripeColor;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.92, y + h * 0.32, w * 0.04, h * 0.025, 0.8, 0, Math.PI * 2);
     ctx.fill();
