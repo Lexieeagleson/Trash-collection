@@ -440,22 +440,22 @@ function drawRaccoon() {
     ctx.arc(x + w * 0.62, y + h * 0.14, w * 0.015, 0, Math.PI * 2);
     ctx.fill();
     
-    // Nose
+    // White muzzle
+    ctx.fillStyle = '#d0d0d0';
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.5, y + h * 0.24, w * 0.12, h * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Nose (on the front of the muzzle where mouth would be)
     ctx.fillStyle = '#2a2a2a';
     ctx.beginPath();
-    ctx.ellipse(x + w * 0.5, y + h * 0.21, w * 0.05, h * 0.025, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + w * 0.5, y + h * 0.24, w * 0.05, h * 0.03, 0, 0, Math.PI * 2);
     ctx.fill();
     
     // Nose highlight
     ctx.fillStyle = '#4a4a4a';
     ctx.beginPath();
-    ctx.arc(x + w * 0.48, y + h * 0.205, w * 0.015, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // White muzzle
-    ctx.fillStyle = '#d0d0d0';
-    ctx.beginPath();
-    ctx.ellipse(x + w * 0.5, y + h * 0.24, w * 0.12, h * 0.05, 0, 0, Math.PI * 2);
+    ctx.arc(x + w * 0.48, y + h * 0.235, w * 0.015, 0, Math.PI * 2);
     ctx.fill();
     
     // Whiskers
