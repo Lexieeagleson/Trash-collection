@@ -395,27 +395,19 @@ function activateGoldenBoost() {
 }
 
 function checkCollision(trash) {
-    // Collision zone for the top of the raccoon's head
-    // The head is drawn with ears at y + h * 0.05 and head ellipse centered at y + h * 0.18
-    // Catch zone covers the top of the head area (ears and upper head)
+    // Collision zone covers the entire raccoon sprite
     const catchZone = {
-        x: raccoon.x + raccoon.width * 0.15,
+        x: raccoon.x,
         y: raccoon.y,
-        width: raccoon.width * 0.7,
-        height: raccoon.height * 0.25
+        width: raccoon.width,
+        height: raccoon.height
     };
     
-    // Trash is caught when it intersects or makes contact with the top of the raccoon's head
-    // Check horizontal overlap
-    const horizontalOverlap = trash.x < catchZone.x + catchZone.width &&
-                              trash.x + trash.width > catchZone.x;
-    
-    // Check if trash's bottom edge has reached or is within the head zone
-    // This ensures trash is caught when it contacts the top of the head
-    const verticalContact = trash.y + trash.height >= catchZone.y &&
-                            trash.y < catchZone.y + catchZone.height;
-    
-    return horizontalOverlap && verticalContact;
+    // Trash is caught when it intersects with any part of the raccoon
+    return trash.x < catchZone.x + catchZone.width &&
+           trash.x + trash.width > catchZone.x &&
+           trash.y < catchZone.y + catchZone.height &&
+           trash.y + trash.height > catchZone.y;
 }
 
 function render() {
