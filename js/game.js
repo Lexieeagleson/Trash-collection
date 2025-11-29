@@ -29,9 +29,10 @@ const game = {
     baseTrashSpeed: 1,
     trashSpeedIncreasePerLevel: 0.15,
     maxTrashSpeed: 5,
-    // Golden trash settings
-    goldenTrashMinLevel: 10,
-    goldenTrashSpawnChance: 0.05 // 5% chance per spawn after level 10
+    // Golden sneaker settings
+    goldenSneakerMinLevel: 10,
+    goldenSneakerLastSpawnLevel: 0, // Tracks last level a golden sneaker spawned
+    goldenSneakerNextSpawnLevel: 0  // The next level at which golden sneaker will spawn
 };
 
 // Polyfill for roundRect if not supported
@@ -234,6 +235,11 @@ function startGame() {
     game.difficultyTimer = 0;
     trashItems = [];
     
+    // Reset golden sneaker spawning state
+    game.goldenSneakerLastSpawnLevel = 0;
+    // Set first golden sneaker spawn level (level 10 + random 0-2 levels)
+    game.goldenSneakerNextSpawnLevel = game.goldenSneakerMinLevel + Math.floor(Math.random() * 3);
+    
     // Reset golden boost state
     raccoon.isGolden = false;
     raccoon.goldenTimer = 0;
@@ -344,13 +350,19 @@ function update(deltaTime) {
 }
 
 function spawnTrash() {
-    // Determine if this should be golden trash (after level 10, with small chance)
+    // Determine if this should be golden sneaker
+    // Spawns approximately once every two levels with randomized interval, starting at level 10
     let type;
     let isGoldenTrash = false;
     
-    if (game.level > game.goldenTrashMinLevel && Math.random() < game.goldenTrashSpawnChance) {
+    if (game.level >= game.goldenSneakerNextSpawnLevel && 
+        game.goldenSneakerLastSpawnLevel !== game.level) {
+        // Spawn golden sneaker
         type = goldenTrashType;
         isGoldenTrash = true;
+        game.goldenSneakerLastSpawnLevel = game.level;
+        // Set next spawn level: approximately 2 levels later with randomization (1-3 levels)
+        game.goldenSneakerNextSpawnLevel = game.level + 1 + Math.floor(Math.random() * 3);
     } else {
         type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
     }
