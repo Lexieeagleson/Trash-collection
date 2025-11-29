@@ -322,7 +322,7 @@ function update(deltaTime) {
         // Check collision with raccoon
         if (checkCollision(trash)) {
             game.score += trash.points;
-            // Check if this is golden trash
+            // Check if this is golden sneaker
             if (trash.isGolden) {
                 activateGoldenBoost();
             }
@@ -367,7 +367,7 @@ function spawnTrash() {
         type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
     }
     
-    const size = isGoldenTrash ? 45 : 35 + Math.random() * 15; // Golden trash is slightly larger
+    const size = isGoldenTrash ? 45 : 35 + Math.random() * 15; // Golden sneaker is slightly larger
     
     // Calculate trash speed based on level (starts slow, increases with level)
     const levelSpeed = game.baseTrashSpeed + (game.level - 1) * game.trashSpeedIncreasePerLevel;
@@ -387,7 +387,7 @@ function spawnTrash() {
     });
 }
 
-// Activate the golden boost when golden trash is collected
+// Activate the golden boost when golden sneaker is collected
 function activateGoldenBoost() {
     raccoon.isGolden = true;
     raccoon.goldenTimer = raccoon.goldenDuration;
@@ -453,7 +453,7 @@ function render() {
         trash.rotation += trash.rotationSpeed;
         game.ctx.rotate(trash.rotation);
         
-        // Add golden glow effect for golden trash
+        // Add golden glow effect for golden sneaker
         if (trash.isGolden) {
             game.ctx.shadowColor = '#FFD700';
             game.ctx.shadowBlur = 20;
