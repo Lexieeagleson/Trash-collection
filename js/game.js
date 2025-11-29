@@ -427,10 +427,10 @@ function render() {
         drawGoldenGlow();
     }
     
-    // Draw trash can first (behind trash items)
-    drawTrashCan();
+    // Draw raccoon back (body, head, tail - behind trash can and trash items)
+    drawRaccoonBack();
     
-    // Draw trash items (between trash can and raccoon)
+    // Draw trash items (falling toward the trash can)
     for (const trash of trashItems) {
         game.ctx.save();
         game.ctx.translate(trash.x + trash.width / 2, trash.y + trash.height / 2);
@@ -457,8 +457,11 @@ function render() {
         game.ctx.restore();
     }
     
-    // Draw raccoon body (in front of trash items)
-    drawRaccoonBody();
+    // Draw trash can (in front, so raccoon appears to hold it forward)
+    drawTrashCan();
+    
+    // Draw raccoon arms last (in front of trash can, holding it)
+    drawRaccoonArms();
     
     // Draw HUD on canvas
     drawHUD();
@@ -572,7 +575,20 @@ function drawTrashCan() {
     ctx.fillRect(x + w * 0.35, y + h * 0.6, w * 0.08, h * 0.35);
 }
 
-function drawRaccoonBody() {
+// Helper function to get raccoon colors based on golden state
+function getRaccoonColors() {
+    return {
+        body: raccoon.isGolden ? '#D4A017' : '#7a7a7a',
+        head: raccoon.isGolden ? '#E5B22A' : '#8a8a8a',
+        ear: raccoon.isGolden ? '#C49A16' : '#6a6a6a',
+        arm: raccoon.isGolden ? '#D4A017' : '#7a7a7a',
+        paw: raccoon.isGolden ? '#B8860B' : '#5a5a5a',
+        tail: raccoon.isGolden ? '#D4A017' : '#7a7a7a',
+        tailStripe: raccoon.isGolden ? '#8B6914' : '#4a4a4a'
+    };
+}
+
+function drawRaccoonBack() {
     const ctx = game.ctx;
     const x = raccoon.x;
     const y = raccoon.y;
@@ -582,29 +598,40 @@ function drawRaccoonBody() {
     // Scale factor for consistent proportions
     const scale = w / 80;
     
-    // Golden color palette for when boost is active
-    const bodyColor = raccoon.isGolden ? '#D4A017' : '#7a7a7a';
-    const headColor = raccoon.isGolden ? '#E5B22A' : '#8a8a8a';
-    const earColor = raccoon.isGolden ? '#C49A16' : '#6a6a6a';
-    const armColor = raccoon.isGolden ? '#D4A017' : '#7a7a7a';
-    const pawColor = raccoon.isGolden ? '#B8860B' : '#5a5a5a';
-    const tailColor = raccoon.isGolden ? '#D4A017' : '#7a7a7a';
-    const tailStripeColor = raccoon.isGolden ? '#8B6914' : '#4a4a4a';
+    // Get colors based on golden state
+    const colors = getRaccoonColors();
+    
+    // Tail (drawn first, behind body)
+    ctx.fillStyle = colors.tail;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.85, y + h * 0.4);
+    ctx.quadraticCurveTo(x + w * 1.1, y + h * 0.3, x + w * 1.0, y + h * 0.15);
+    ctx.quadraticCurveTo(x + w * 0.95, y + h * 0.25, x + w * 0.75, y + h * 0.38);
+    ctx.fill();
+    
+    // Tail stripes
+    ctx.fillStyle = colors.tailStripe;
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.92, y + h * 0.32, w * 0.04, h * 0.025, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.98, y + h * 0.22, w * 0.035, h * 0.02, 0.6, 0, Math.PI * 2);
+    ctx.fill();
     
     // Raccoon body
-    ctx.fillStyle = bodyColor;
+    ctx.fillStyle = colors.body;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.5, y + h * 0.38, w * 0.35, h * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
     
     // Raccoon head
-    ctx.fillStyle = headColor;
+    ctx.fillStyle = colors.head;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.5, y + h * 0.18, w * 0.32, h * 0.18, 0, 0, Math.PI * 2);
     ctx.fill();
     
     // Ears
-    ctx.fillStyle = earColor;
+    ctx.fillStyle = colors.ear;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.25, y + h * 0.05, w * 0.1, h * 0.08, -0.3, 0, Math.PI * 2);
     ctx.fill();
@@ -707,9 +734,20 @@ function drawRaccoonBody() {
     ctx.moveTo(x + w * 0.62, y + h * 0.26);
     ctx.lineTo(x + w * 0.8, y + h * 0.28);
     ctx.stroke();
+}
+
+function drawRaccoonArms() {
+    const ctx = game.ctx;
+    const x = raccoon.x;
+    const y = raccoon.y;
+    const w = raccoon.width;
+    const h = raccoon.height;
     
-    // Arms holding can
-    ctx.fillStyle = armColor;
+    // Get colors based on golden state
+    const colors = getRaccoonColors();
+    
+    // Arms holding can (drawn in front of trash can)
+    ctx.fillStyle = colors.arm;
     // Left arm
     ctx.beginPath();
     ctx.ellipse(x + w * 0.18, y + h * 0.45, w * 0.08, h * 0.12, -0.5, 0, Math.PI * 2);
@@ -719,30 +757,13 @@ function drawRaccoonBody() {
     ctx.ellipse(x + w * 0.82, y + h * 0.45, w * 0.08, h * 0.12, 0.5, 0, Math.PI * 2);
     ctx.fill();
     
-    // Paws
-    ctx.fillStyle = pawColor;
+    // Paws (gripping the trash can)
+    ctx.fillStyle = colors.paw;
     ctx.beginPath();
     ctx.ellipse(x + w * 0.12, y + h * 0.52, w * 0.06, h * 0.04, -0.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
     ctx.ellipse(x + w * 0.88, y + h * 0.52, w * 0.06, h * 0.04, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Tail
-    ctx.fillStyle = tailColor;
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.85, y + h * 0.4);
-    ctx.quadraticCurveTo(x + w * 1.1, y + h * 0.3, x + w * 1.0, y + h * 0.15);
-    ctx.quadraticCurveTo(x + w * 0.95, y + h * 0.25, x + w * 0.75, y + h * 0.38);
-    ctx.fill();
-    
-    // Tail stripes
-    ctx.fillStyle = tailStripeColor;
-    ctx.beginPath();
-    ctx.ellipse(x + w * 0.92, y + h * 0.32, w * 0.04, h * 0.025, 0.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(x + w * 0.98, y + h * 0.22, w * 0.035, h * 0.02, 0.6, 0, Math.PI * 2);
     ctx.fill();
 }
 
