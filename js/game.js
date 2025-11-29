@@ -88,9 +88,9 @@ const trashTypes = [
     { emoji: '🥡', points: 20 }
 ];
 
-// Golden trash (special item after level 10)
+// Golden sneaker (special item after level 10)
 const goldenTrashType = {
-    emoji: '⭐',
+    emoji: '👟',
     points: 50,
     isGolden: true
 };
@@ -327,14 +327,18 @@ function update(deltaTime) {
         
         // Check if trash hit ground
         if (trash.y > game.height) {
-            game.lives--;
-            updateUI();
-            trashItems.splice(i, 1);
-            
-            if (game.lives <= 0) {
-                gameOver();
-                return;
+            // Golden sneakers don't remove lives when missed
+            if (!trash.isGolden) {
+                game.lives--;
+                updateUI();
+                
+                if (game.lives <= 0) {
+                    trashItems.splice(i, 1);
+                    gameOver();
+                    return;
+                }
             }
+            trashItems.splice(i, 1);
         }
     }
 }
