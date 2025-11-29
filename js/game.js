@@ -128,8 +128,8 @@ function resizeCanvas() {
     const baseSizeForLevel = game.baseRaccoonWidth - (game.level - 1) * game.raccoonShrinkPerLevel;
     const levelRaccoonWidth = Math.max(game.minRaccoonWidth, baseSizeForLevel);
     
-    // Update raccoon position and size
-    raccoon.width = Math.min(levelRaccoonWidth, game.width * 0.3);
+    // Update raccoon position and size (cap at 45% of game width to allow large raccoon at start)
+    raccoon.width = Math.min(levelRaccoonWidth, game.width * 0.45);
     raccoon.height = raccoon.width * 1.25;
     raccoon.y = game.height - raccoon.height - 20;
     
