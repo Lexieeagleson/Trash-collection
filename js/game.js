@@ -29,9 +29,10 @@ const game = {
     baseTrashSpeed: 1,
     trashSpeedIncreasePerLevel: 0.15,
     maxTrashSpeed: 5,
-    // Golden trash settings
-    goldenTrashMinLevel: 10,
-    goldenTrashSpawnChance: 0.05 // 5% chance per spawn after level 10
+    // Golden sneaker settings
+    goldenSneakerMinLevel: 10,
+    goldenSneakerLastSpawnLevel: 0, // Tracks last level a golden sneaker spawned
+    goldenSneakerNextSpawnLevel: 0  // The next level at which golden sneaker will spawn
 };
 
 // Polyfill for roundRect if not supported
@@ -88,9 +89,9 @@ const trashTypes = [
     { emoji: '🥡', points: 20 }
 ];
 
-// Golden trash (special item after level 10)
+// Golden sneaker (special item after level 10)
 const goldenTrashType = {
-    emoji: '⭐',
+    emoji: '👟',
     points: 50,
     isGolden: true
 };
@@ -234,6 +235,11 @@ function startGame() {
     game.difficultyTimer = 0;
     trashItems = [];
     
+    // Reset golden sneaker spawning state
+    game.goldenSneakerLastSpawnLevel = 0;
+    // Set first golden sneaker spawn level (level 10 + random 0-2 levels)
+    game.goldenSneakerNextSpawnLevel = game.goldenSneakerMinLevel + Math.floor(Math.random() * 3);
+    
     // Reset golden boost state
     raccoon.isGolden = false;
     raccoon.goldenTimer = 0;
@@ -316,7 +322,7 @@ function update(deltaTime) {
         // Check collision with raccoon
         if (checkCollision(trash)) {
             game.score += trash.points;
-            // Check if this is golden trash
+            // Check if this is golden sneaker
             if (trash.isGolden) {
                 activateGoldenBoost();
             }
@@ -327,31 +333,41 @@ function update(deltaTime) {
         
         // Check if trash hit ground
         if (trash.y > game.height) {
-            game.lives--;
-            updateUI();
-            trashItems.splice(i, 1);
-            
-            if (game.lives <= 0) {
-                gameOver();
-                return;
+            // Golden sneakers don't remove lives when missed
+            if (!trash.isGolden) {
+                game.lives--;
+                updateUI();
+                
+                if (game.lives <= 0) {
+                    trashItems.splice(i, 1);
+                    gameOver();
+                    return;
+                }
             }
+            trashItems.splice(i, 1);
         }
     }
 }
 
 function spawnTrash() {
-    // Determine if this should be golden trash (after level 10, with small chance)
+    // Determine if this should be golden sneaker
+    // Spawns approximately once every two levels with randomized interval, starting at level 10
     let type;
     let isGoldenTrash = false;
     
-    if (game.level > game.goldenTrashMinLevel && Math.random() < game.goldenTrashSpawnChance) {
+    if (game.level >= game.goldenSneakerNextSpawnLevel && 
+        game.goldenSneakerLastSpawnLevel !== game.level) {
+        // Spawn golden sneaker
         type = goldenTrashType;
         isGoldenTrash = true;
+        game.goldenSneakerLastSpawnLevel = game.level;
+        // Set next spawn level: approximately 2 levels later with randomization (1-3 levels)
+        game.goldenSneakerNextSpawnLevel = game.level + 1 + Math.floor(Math.random() * 3);
     } else {
         type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
     }
     
-    const size = isGoldenTrash ? 45 : 35 + Math.random() * 15; // Golden trash is slightly larger
+    const size = isGoldenTrash ? 45 : 35 + Math.random() * 15; // Golden sneaker is slightly larger
     
     // Calculate trash speed based on level (starts slow, increases with level)
     const levelSpeed = game.baseTrashSpeed + (game.level - 1) * game.trashSpeedIncreasePerLevel;
@@ -371,7 +387,7 @@ function spawnTrash() {
     });
 }
 
-// Activate the golden boost when golden trash is collected
+// Activate the golden boost when golden sneaker is collected
 function activateGoldenBoost() {
     raccoon.isGolden = true;
     raccoon.goldenTimer = raccoon.goldenDuration;
@@ -437,7 +453,7 @@ function render() {
         trash.rotation += trash.rotationSpeed;
         game.ctx.rotate(trash.rotation);
         
-        // Add golden glow effect for golden trash
+        // Add golden glow effect for golden sneaker
         if (trash.isGolden) {
             game.ctx.shadowColor = '#FFD700';
             game.ctx.shadowBlur = 20;
