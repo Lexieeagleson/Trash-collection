@@ -557,22 +557,85 @@ function drawTrashCan() {
     // Scale factor for consistent proportions
     const scale = w / 80;
     
-    // Garbage can
-    ctx.fillStyle = '#6b6b6b';
+    // Trash can dimensions
+    const canTop = y + h * 0.48;
+    const canBottom = y + h * 0.98;
+    const canHeight = canBottom - canTop;
+    const topWidth = w * 0.75;
+    const bottomWidth = w * 0.6;
+    const centerX = x + w * 0.5;
+    
+    // Draw trash can body (tapered shape - wider at top)
+    ctx.fillStyle = '#5a5a5a';
     ctx.beginPath();
-    ctx.roundRect(x + w * 0.15, y + h * 0.55, w * 0.7, h * 0.45, 5 * scale);
+    ctx.moveTo(centerX - topWidth / 2, canTop);
+    ctx.lineTo(centerX + topWidth / 2, canTop);
+    ctx.lineTo(centerX + bottomWidth / 2, canBottom);
+    ctx.lineTo(centerX - bottomWidth / 2, canBottom);
+    ctx.closePath();
     ctx.fill();
     
-    // Can lid
-    ctx.fillStyle = '#8a8a8a';
+    // Draw darker outline
+    ctx.strokeStyle = '#3a3a3a';
+    ctx.lineWidth = 2 * scale;
+    ctx.stroke();
+    
+    // Horizontal ridges on can body
+    ctx.strokeStyle = '#4a4a4a';
+    ctx.lineWidth = 1.5 * scale;
+    for (let i = 1; i <= 3; i++) {
+        const ridgeY = canTop + (canHeight * i) / 4;
+        const ridgeProgress = i / 4;
+        const ridgeWidth = topWidth - (topWidth - bottomWidth) * ridgeProgress;
+        ctx.beginPath();
+        ctx.moveTo(centerX - ridgeWidth / 2, ridgeY);
+        ctx.lineTo(centerX + ridgeWidth / 2, ridgeY);
+        ctx.stroke();
+    }
+    
+    // Highlight on left side
+    ctx.fillStyle = '#7a7a7a';
     ctx.beginPath();
-    ctx.ellipse(x + w * 0.5, y + h * 0.55, w * 0.4, h * 0.08, 0, 0, Math.PI * 2);
+    ctx.moveTo(centerX - topWidth / 2 + 4 * scale, canTop + 2 * scale);
+    ctx.lineTo(centerX - topWidth / 2 + 12 * scale, canTop + 2 * scale);
+    ctx.lineTo(centerX - bottomWidth / 2 + 10 * scale, canBottom - 2 * scale);
+    ctx.lineTo(centerX - bottomWidth / 2 + 4 * scale, canBottom - 2 * scale);
+    ctx.closePath();
     ctx.fill();
     
-    // Can highlights
-    ctx.fillStyle = '#9a9a9a';
-    ctx.fillRect(x + w * 0.2, y + h * 0.6, w * 0.08, h * 0.35);
-    ctx.fillRect(x + w * 0.35, y + h * 0.6, w * 0.08, h * 0.35);
+    // Rim at top of can (ellipse)
+    ctx.fillStyle = '#6a6a6a';
+    ctx.beginPath();
+    ctx.ellipse(centerX, canTop, topWidth / 2, h * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#4a4a4a';
+    ctx.lineWidth = 1.5 * scale;
+    ctx.stroke();
+    
+    // Inner rim (darker, showing opening)
+    ctx.fillStyle = '#2a2a2a';
+    ctx.beginPath();
+    ctx.ellipse(centerX, canTop, topWidth / 2 - 4 * scale, h * 0.035, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Handles on sides
+    ctx.strokeStyle = '#4a4a4a';
+    ctx.lineWidth = 3 * scale;
+    ctx.lineCap = 'round';
+    
+    // Left handle
+    ctx.beginPath();
+    ctx.moveTo(centerX - topWidth / 2 - 2 * scale, canTop + canHeight * 0.2);
+    ctx.quadraticCurveTo(centerX - topWidth / 2 - 8 * scale, canTop + canHeight * 0.35, 
+                         centerX - topWidth / 2 - 2 * scale, canTop + canHeight * 0.5);
+    ctx.stroke();
+    
+    // Right handle
+    ctx.beginPath();
+    ctx.moveTo(centerX + topWidth / 2 + 2 * scale, canTop + canHeight * 0.2);
+    ctx.quadraticCurveTo(centerX + topWidth / 2 + 8 * scale, canTop + canHeight * 0.35, 
+                         centerX + topWidth / 2 + 2 * scale, canTop + canHeight * 0.5);
+    ctx.stroke();
 }
 
 // Helper function to get raccoon colors based on golden state
