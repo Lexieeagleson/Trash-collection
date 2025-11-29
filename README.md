@@ -26,6 +26,16 @@ A fun mobile game where you help a cute cartoon raccoon catch falling trash!
 | 🗞️ Newspaper | 20 |
 | 🥡 Takeout | 20 |
 
+## ⭐ Golden Trash (Special Item)
+
+After reaching **level 10**, a special **golden trash** (⭐) will occasionally fall from the sky! This rare item:
+- Appears sparingly (5% chance per spawn)
+- Awards **50 points** when collected
+- Gives your raccoon a **golden glow** effect
+- Provides a **speed boost** for **15 seconds**
+
+Catch it to become a golden raccoon with enhanced speed!
+
 ## 🚀 Play Now
 
 Play the game at: [GitHub Pages URL]
