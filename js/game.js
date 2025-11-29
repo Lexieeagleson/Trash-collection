@@ -17,10 +17,9 @@ const game = {
     difficultyInterval: 10000,
     // Level progression settings
     pointsPerLevel: 100,
-    // Window sizing - starts smaller and expands
-    baseWindowWidth: 300,
-    baseWindowHeight: 400,
-    windowExpansionPerTenLevels: 20,
+    // Window sizing - fixed larger size from the start (no dynamic resizing)
+    baseWindowWidth: 400,
+    baseWindowHeight: 550,
     // Trash can sizing - starts large and shrinks
     baseRaccoonWidth: 120,
     minRaccoonWidth: 60,
@@ -111,10 +110,9 @@ function init() {
 }
 
 function resizeCanvas() {
-    // Calculate window expansion based on level (every 10 levels, expand by 20px)
-    const levelExpansion = Math.floor((game.level - 1) / 10) * game.windowExpansionPerTenLevels;
-    const targetWidth = game.baseWindowWidth + levelExpansion;
-    const targetHeight = game.baseWindowHeight + levelExpansion;
+    // Use fixed base size (no dynamic resizing based on level)
+    const targetWidth = game.baseWindowWidth;
+    const targetHeight = game.baseWindowHeight;
     
     // Use the smaller of target size or window size
     const maxWidth = Math.min(targetWidth, window.innerWidth);
@@ -138,6 +136,17 @@ function resizeCanvas() {
         raccoon.x = (game.width - raccoon.width) / 2;
         raccoon.targetX = raccoon.x;
     }
+}
+
+function updateRaccoonSize() {
+    // Calculate raccoon size based on level (starts large, shrinks with level)
+    const baseSizeForLevel = game.baseRaccoonWidth - (game.level - 1) * game.raccoonShrinkPerLevel;
+    const levelRaccoonWidth = Math.max(game.minRaccoonWidth, baseSizeForLevel);
+    
+    // Update raccoon size (cap at configured ratio of game width)
+    raccoon.width = Math.min(levelRaccoonWidth, game.width * game.maxRaccoonWidthRatio);
+    raccoon.height = raccoon.width * 1.25;
+    raccoon.y = game.height - raccoon.height - 20;
 }
 
 function setupInputHandlers() {
@@ -241,8 +250,8 @@ function update(deltaTime) {
     const newLevel = Math.floor(game.score / game.pointsPerLevel) + 1;
     if (newLevel !== game.level) {
         game.level = newLevel;
-        // Resize canvas and update raccoon size for new level
-        resizeCanvas();
+        // Update raccoon size for new level (no canvas resize to avoid visual jump)
+        updateRaccoonSize();
         // Constrain raccoon position to new boundaries
         constrainRaccoon();
         raccoon.x = Math.max(0, Math.min(game.width - raccoon.width, raccoon.x));
