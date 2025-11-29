@@ -25,6 +25,7 @@ const game = {
     baseRaccoonWidth: 120,
     minRaccoonWidth: 60,
     raccoonShrinkPerLevel: 5,
+    maxRaccoonWidthRatio: 0.45,
     // Trash speed - starts slow and increases
     baseTrashSpeed: 1,
     trashSpeedIncreasePerLevel: 0.15,
@@ -128,8 +129,8 @@ function resizeCanvas() {
     const baseSizeForLevel = game.baseRaccoonWidth - (game.level - 1) * game.raccoonShrinkPerLevel;
     const levelRaccoonWidth = Math.max(game.minRaccoonWidth, baseSizeForLevel);
     
-    // Update raccoon position and size (cap at 45% of game width to allow large raccoon at start)
-    raccoon.width = Math.min(levelRaccoonWidth, game.width * 0.45);
+    // Update raccoon position and size (cap at configured ratio of game width)
+    raccoon.width = Math.min(levelRaccoonWidth, game.width * game.maxRaccoonWidthRatio);
     raccoon.height = raccoon.width * 1.25;
     raccoon.y = game.height - raccoon.height - 20;
     
