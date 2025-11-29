@@ -359,7 +359,10 @@ function render() {
         game.ctx.fill();
     }
     
-    // Draw trash items
+    // Draw trash can first (behind trash items)
+    drawTrashCan();
+    
+    // Draw trash items (between trash can and raccoon)
     for (const trash of trashItems) {
         game.ctx.save();
         game.ctx.translate(trash.x + trash.width / 2, trash.y + trash.height / 2);
@@ -372,8 +375,8 @@ function render() {
         game.ctx.restore();
     }
     
-    // Draw raccoon
-    drawRaccoon();
+    // Draw raccoon body (in front of trash items)
+    drawRaccoonBody();
     
     // Draw HUD on canvas
     drawHUD();
@@ -428,7 +431,7 @@ function drawStars() {
     }
 }
 
-function drawRaccoon() {
+function drawTrashCan() {
     const ctx = game.ctx;
     const x = raccoon.x;
     const y = raccoon.y;
@@ -454,6 +457,17 @@ function drawRaccoon() {
     ctx.fillStyle = '#9a9a9a';
     ctx.fillRect(x + w * 0.2, y + h * 0.6, w * 0.08, h * 0.35);
     ctx.fillRect(x + w * 0.35, y + h * 0.6, w * 0.08, h * 0.35);
+}
+
+function drawRaccoonBody() {
+    const ctx = game.ctx;
+    const x = raccoon.x;
+    const y = raccoon.y;
+    const w = raccoon.width;
+    const h = raccoon.height;
+    
+    // Scale factor for consistent proportions
+    const scale = w / 80;
     
     // Raccoon body
     ctx.fillStyle = '#7a7a7a';
