@@ -97,15 +97,32 @@ const goldenTrashType = {
 };
 
 // DOM elements
-let startScreen, gameScreen, gameOverScreen;
+let menuScreen, startScreen, gameScreen, gameOverScreen;
 let finalScore;
 
 // Touch/mouse tracking
 let touchStartX = 0;
 let isDragging = false;
 
+// Show main menu
+function showMenu() {
+    menuScreen.classList.remove('hidden');
+    startScreen.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    
+    // Also hide stack game screens if they exist
+    const stackStartScreen = document.getElementById('stack-start-screen');
+    const stackGameScreen = document.getElementById('stack-game-screen');
+    const stackGameOverScreen = document.getElementById('stack-game-over-screen');
+    if (stackStartScreen) stackStartScreen.classList.add('hidden');
+    if (stackGameScreen) stackGameScreen.classList.add('hidden');
+    if (stackGameOverScreen) stackGameOverScreen.classList.add('hidden');
+}
+
 // Initialize game
 function init() {
+    menuScreen = document.getElementById('menu-screen');
     startScreen = document.getElementById('start-screen');
     gameScreen = document.getElementById('game-screen');
     gameOverScreen = document.getElementById('game-over-screen');
@@ -118,12 +135,29 @@ function init() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     
+    // Menu event listeners
+    document.getElementById('trash-catcher-btn').addEventListener('click', showTrashCatcherStart);
+    document.getElementById('trash-stack-btn').addEventListener('click', showTrashStackStart);
+    
     // Event listeners
     document.getElementById('start-btn').addEventListener('click', startGame);
     document.getElementById('restart-btn').addEventListener('click', restartGame);
+    document.getElementById('back-to-menu-btn').addEventListener('click', showMenu);
+    document.getElementById('menu-btn-1').addEventListener('click', showMenu);
     
     // Input handlers
     setupInputHandlers();
+}
+
+function showTrashCatcherStart() {
+    menuScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+}
+
+function showTrashStackStart() {
+    menuScreen.classList.add('hidden');
+    const stackStartScreen = document.getElementById('stack-start-screen');
+    if (stackStartScreen) stackStartScreen.classList.remove('hidden');
 }
 
 function resizeCanvas() {
@@ -222,6 +256,7 @@ function constrainRaccoon() {
 }
 
 function startGame() {
+    menuScreen.classList.add('hidden');
     startScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
     gameOverScreen.classList.add('hidden');

@@ -5,26 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Trash Catcher - Raccoon Game</title>
+    <title>Raccoon Games</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div id="game-container">
-        <div id="start-screen">
+        <!-- Main Menu -->
+        <div id="menu-screen">
+            <h1>🦝 Raccoon Games</h1>
+            <p>Choose a game to play!</p>
+            <div class="menu-buttons">
+                <button id="trash-catcher-btn" class="menu-btn">
+                    <span class="btn-emoji">🗑️</span>
+                    <span class="btn-title">Trash Catcher</span>
+                    <span class="btn-desc">Catch falling trash!</span>
+                </button>
+                <button id="trash-stack-btn" class="menu-btn">
+                    <span class="btn-emoji">🦝</span>
+                    <span class="btn-title">Trash Stack</span>
+                    <span class="btn-desc">Stack raccoons high!</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Trash Catcher Game Start Screen -->
+        <div id="start-screen" class="hidden">
             <h1>🦝 Trash Catcher</h1>
             <p>Help the raccoon catch falling trash!</p>
             <p class="instructions">Slide left and right to move</p>
             <button id="start-btn">Start Game</button>
+            <button id="back-to-menu-btn" class="back-btn">Back to Menu</button>
         </div>
+        
+        <!-- Trash Catcher Game Screen -->
         <div id="game-screen" class="hidden">
             <canvas id="game-canvas"></canvas>
         </div>
+        
+        <!-- Trash Catcher Game Over Screen -->
         <div id="game-over-screen" class="hidden">
             <h1>Game Over!</h1>
             <p>Final Score: <span id="final-score">0</span></p>
             <button id="restart-btn">Play Again</button>
+            <button id="menu-btn-1" class="back-btn">Back to Menu</button>
+        </div>
+        
+        <!-- Trash Stack Game Start Screen -->
+        <div id="stack-start-screen" class="hidden">
+            <h1>🦝 Trash Stack</h1>
+            <p>Catch falling raccoons to build a tower!</p>
+            <p class="instructions">Move side to side - the stack gets wobbly!</p>
+            <button id="stack-start-btn">Start Game</button>
+            <button id="back-to-menu-btn-2" class="back-btn">Back to Menu</button>
+        </div>
+        
+        <!-- Trash Stack Game Screen -->
+        <div id="stack-game-screen" class="hidden">
+            <canvas id="stack-canvas"></canvas>
+        </div>
+        
+        <!-- Trash Stack Game Over Screen -->
+        <div id="stack-game-over-screen" class="hidden">
+            <h1>Tower Collapsed!</h1>
+            <p>Raccoons Stacked: <span id="stack-final-score">0</span></p>
+            <p>Height Reached: <span id="stack-height">0</span>m</p>
+            <button id="stack-restart-btn">Play Again</button>
+            <button id="menu-btn-2" class="back-btn">Back to Menu</button>
         </div>
     </div>
     <script src="js/game.js"></script>
+    <script src="js/trash-stack.js"></script>
 </body>
 </html>
