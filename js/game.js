@@ -457,7 +457,7 @@ function render() {
         // Add golden glow effect for golden sneaker
         if (trash.isGolden) {
             game.ctx.shadowColor = '#FFFF00';
-            game.ctx.shadowBlur = 20;
+            game.ctx.shadowBlur = 35;
         }
         
         game.ctx.font = `${trash.width}px Arial`;
