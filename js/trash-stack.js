@@ -429,14 +429,14 @@ function renderStackGame() {
         ctx.fill();
     }
     
-    // Draw base raccoon
-    drawStackRaccoon(ctx, baseRaccoon.x, baseRaccoon.y, baseRaccoon.width, baseRaccoon.height, false);
-    
-    // Draw stacked raccoons
-    for (let i = 0; i < raccoonStack.length; i++) {
+    // Draw stacked raccoons from top to bottom (so higher raccoons appear behind/on shoulders)
+    for (let i = raccoonStack.length - 1; i >= 0; i--) {
         const r = raccoonStack[i];
         drawStackRaccoon(ctx, r.x, r.y, r.width, r.height, true);
     }
+    
+    // Draw base raccoon last (in front, at the bottom)
+    drawStackRaccoon(ctx, baseRaccoon.x, baseRaccoon.y, baseRaccoon.width, baseRaccoon.height, false);
     
     // Draw falling raccoons (in world coordinates, inside camera transform)
     for (const raccoon of fallingRaccoons) {
