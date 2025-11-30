@@ -331,7 +331,9 @@ function updateStackPositions() {
 function updateCamera() {
     // Camera follows the top of the stack
     const topY = getStackTopY();
-    const viewThreshold = stackGame.height * 0.4;
+    // Position stack towards bottom of screen - more sky/drop zone available
+    // Using 0.65 means the stack top stays at 65% down from the top of the screen
+    const viewThreshold = stackGame.height * 0.65;
     
     if (topY < viewThreshold) {
         stackGame.targetCameraY = viewThreshold - topY;
@@ -350,12 +352,19 @@ function spawnFallingRaccoon() {
     // Spawn position in world coordinates (above the current view)
     const spawnY = -stackGame.cameraY - height - 50;
     
+    // Calculate falling speed based on stack height
+    // Starts slow (0.5) and increases as the tower gets higher
+    const stackCount = raccoonStack.length;
+    const baseSpeed = 0.5;  // Slower initial speed
+    const speedIncrease = Math.min(stackCount * 0.15, 2.5);  // Gradually increase, cap at +2.5
+    const fallSpeed = baseSpeed + speedIncrease + Math.random() * 0.5;
+    
     fallingRaccoons.push({
         x: Math.random() * (stackGame.width - width),
         y: spawnY,  // World Y coordinate
         width: width,
         height: height,
-        vy: 1 + Math.random() * 2,
+        vy: fallSpeed,
         rotation: 0,
         rotationSpeed: (Math.random() - 0.5) * 0.05
     });
