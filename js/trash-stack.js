@@ -267,7 +267,9 @@ function updateStackGame(deltaTime) {
     // Update falling raccoons (all in world coordinates)
     for (let i = fallingRaccoons.length - 1; i >= 0; i--) {
         const raccoon = fallingRaccoons[i];
-        raccoon.vy += stackGame.gravity;
+        // Apply gravity with per-raccoon multiplier (slower for early raccoons)
+        const effectiveGravity = stackGame.gravity * (raccoon.gravityMultiplier || 1.0);
+        raccoon.vy += effectiveGravity;
         raccoon.y += raccoon.vy * (deltaTime / 16);
         raccoon.rotation += raccoon.rotationSpeed;
         
@@ -352,12 +354,17 @@ function spawnFallingRaccoon() {
     // Spawn position in world coordinates (above the current view)
     const spawnY = -stackGame.cameraY - height - 50;
     
-    // Calculate falling speed based on stack height
-    // Starts slow (0.5) and increases as the tower gets higher
+    // Calculate falling speed and gravity based on stack height
+    // Beginning raccoons fall much more slowly, speed increases with stack height
     const stackCount = raccoonStack.length;
-    const baseSpeed = 0.5;  // Slower initial speed
-    const speedIncrease = Math.min(stackCount * 0.15, 2.5);  // Gradually increase, cap at +2.5
-    const fallSpeed = baseSpeed + speedIncrease + Math.random() * 0.5;
+    const baseSpeed = 0.1;  // Very slow initial speed for beginning raccoons
+    const speedIncrease = Math.min(stackCount * 0.1, 2.0);  // Gradually increase with stack height, cap at +2.0
+    const fallSpeed = baseSpeed + speedIncrease + Math.random() * 0.3;
+    
+    // Gravity multiplier: starts at 0.3 (30% of normal) and increases with stack height
+    const baseGravityMultiplier = 0.3;
+    const gravityIncrease = Math.min(stackCount * 0.07, 0.7);  // Gradually increase, cap at 1.0 total
+    const gravityMultiplier = baseGravityMultiplier + gravityIncrease;
     
     fallingRaccoons.push({
         x: Math.random() * (stackGame.width - width),
@@ -365,6 +372,7 @@ function spawnFallingRaccoon() {
         width: width,
         height: height,
         vy: fallSpeed,
+        gravityMultiplier: gravityMultiplier,  // Per-raccoon gravity scaling
         rotation: 0,
         rotationSpeed: (Math.random() - 0.5) * 0.05
     });
