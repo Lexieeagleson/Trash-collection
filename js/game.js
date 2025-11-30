@@ -92,7 +92,7 @@ const trashTypes = [
 // Golden sneaker (special item after level 10)
 const goldenTrashType = {
     emoji: '👟',
-    points: 50,
+    points: 0,
     isGolden: true
 };
 
@@ -237,8 +237,8 @@ function startGame() {
     
     // Reset golden sneaker spawning state
     game.goldenSneakerLastSpawnLevel = 0;
-    // Set first golden sneaker spawn level (level 10 + random 0-2 levels)
-    game.goldenSneakerNextSpawnLevel = game.goldenSneakerMinLevel + Math.floor(Math.random() * 3);
+    // Set first golden sneaker spawn level (level 10 + random 0-4 levels)
+    game.goldenSneakerNextSpawnLevel = game.goldenSneakerMinLevel + Math.floor(Math.random() * 5);
     
     // Reset golden boost state
     raccoon.isGolden = false;
@@ -361,8 +361,8 @@ function spawnTrash() {
         type = goldenTrashType;
         isGoldenTrash = true;
         game.goldenSneakerLastSpawnLevel = game.level;
-        // Set next spawn level: approximately 2 levels later with randomization (1-3 levels)
-        game.goldenSneakerNextSpawnLevel = game.level + 1 + Math.floor(Math.random() * 3);
+        // Set next spawn level: 3-5 levels later with randomization
+        game.goldenSneakerNextSpawnLevel = game.level + 3 + Math.floor(Math.random() * 3);
     } else {
         type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
     }
@@ -456,7 +456,7 @@ function render() {
         
         // Add golden glow effect for golden sneaker
         if (trash.isGolden) {
-            game.ctx.shadowColor = '#FFD700';
+            game.ctx.shadowColor = '#FFFF00';
             game.ctx.shadowBlur = 20;
         }
         
@@ -534,9 +534,9 @@ function drawGoldenGlow() {
         x + w / 2, y + h / 2, 0,
         x + w / 2, y + h / 2, w * 0.9
     );
-    gradient.addColorStop(0, `rgba(255, 215, 0, ${0.6 * pulseIntensity})`);
-    gradient.addColorStop(0.5, `rgba(255, 215, 0, ${0.3 * pulseIntensity})`);
-    gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    gradient.addColorStop(0, `rgba(255, 255, 0, ${0.6 * pulseIntensity})`);
+    gradient.addColorStop(0.5, `rgba(255, 255, 0, ${0.3 * pulseIntensity})`);
+    gradient.addColorStop(1, 'rgba(255, 255, 0, 0)');
     
     ctx.fillStyle = gradient;
     ctx.beginPath();
