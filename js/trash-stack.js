@@ -34,7 +34,15 @@ const stackGame = {
     wobbleAmount: 0,
     wobbleSpeed: 0.03,
     wobblePhase: 0,
-    maxWobble: 15
+    maxWobble: 15,
+    
+    // Bad items settings
+    badItemStartTime: 420000, // 7 minutes in milliseconds
+    gameElapsedTime: 0, // Track total game time
+    badItemSpawnTimer: 0,
+    badItemBaseInterval: 5000, // Base interval between bad items (5 seconds)
+    badItemMinInterval: 1500, // Minimum interval at high stack heights
+    maxBadItemsOnScreen: 3 // Maximum bad items that can fall at once
 };
 
 // Base raccoon (player controlled)
@@ -53,6 +61,18 @@ let raccoonStack = [];
 
 // Falling raccoons
 let fallingRaccoons = [];
+
+// Bad items (items that reduce stack when caught)
+let fallingBadItems = [];
+
+// Bad item types with emojis - things a raccoon wouldn't want
+const badItemTypes = [
+    { emoji: '🧹', name: 'broom' },      // Broom to sweep them away
+    { emoji: '🪤', name: 'trap' },       // Mouse trap
+    { emoji: '💣', name: 'bomb' },       // Bomb
+    { emoji: '🔥', name: 'fire' },       // Fire
+    { emoji: '⚡', name: 'lightning' }   // Lightning
+];
 
 // DOM elements for stack game
 let stackStartScreen, stackGameScreen, stackGameOverScreen;
@@ -196,9 +216,14 @@ function startStackGame() {
     stackGame.wobbleAmount = 0;
     stackGame.wobblePhase = 0;
     
+    // Reset bad items state
+    stackGame.gameElapsedTime = 0;
+    stackGame.badItemSpawnTimer = 0;
+    
     // Clear arrays
     raccoonStack = [];
     fallingRaccoons = [];
+    fallingBadItems = [];
     
     // Reset base raccoon
     resizeStackCanvas();
@@ -230,6 +255,9 @@ function stackGameLoop(currentTime = 0) {
 }
 
 function updateStackGame(deltaTime) {
+    // Track elapsed game time
+    stackGame.gameElapsedTime += deltaTime;
+    
     // Update wobble phase
     stackGame.wobblePhase += stackGame.wobbleSpeed * deltaTime;
     
@@ -262,6 +290,22 @@ function updateStackGame(deltaTime) {
         stackGame.spawnTimer = 0;
         // Slightly decrease spawn interval over time
         stackGame.spawnInterval = Math.max(stackGame.minSpawnInterval, stackGame.spawnInterval - 20);
+    }
+    
+    // Spawn bad items after 7 minutes
+    if (stackGame.gameElapsedTime >= stackGame.badItemStartTime) {
+        stackGame.badItemSpawnTimer += deltaTime;
+        
+        // Calculate spawn interval based on stack height (higher stack = more frequent bad items)
+        const stackHeightFactor = Math.min(1, stackCount / 20); // Max effect at 20 raccoons
+        const currentBadItemInterval = stackGame.badItemBaseInterval - 
+            (stackGame.badItemBaseInterval - stackGame.badItemMinInterval) * stackHeightFactor;
+        
+        if (stackGame.badItemSpawnTimer >= currentBadItemInterval && 
+            fallingBadItems.length < stackGame.maxBadItemsOnScreen) {
+            spawnBadItem();
+            stackGame.badItemSpawnTimer = 0;
+        }
     }
     
     // Update falling raccoons (all in world coordinates)
@@ -302,6 +346,9 @@ function updateStackGame(deltaTime) {
             }
         }
     }
+    
+    // Update bad items (all in world coordinates)
+    updateBadItems(deltaTime);
     
     // Check for stack collapse (if wobble is too extreme)
     checkStackStability();
@@ -409,6 +456,94 @@ function checkStackStability() {
     }
 }
 
+// Spawn a bad item that falls from above
+function spawnBadItem() {
+    const size = 40 + Math.random() * 10;
+    
+    // Spawn position in world coordinates (above the current view)
+    const spawnY = -stackGame.cameraY - size - 50;
+    
+    // Select a random bad item type
+    const itemType = badItemTypes[Math.floor(Math.random() * badItemTypes.length)];
+    
+    // Bad items fall at a moderate speed
+    const fallSpeed = 0.5 + Math.random() * 0.5;
+    const gravityMultiplier = 0.5;
+    
+    fallingBadItems.push({
+        x: Math.random() * (stackGame.width - size),
+        y: spawnY,
+        width: size,
+        height: size,
+        vy: fallSpeed,
+        gravityMultiplier: gravityMultiplier,
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.08,
+        emoji: itemType.emoji,
+        name: itemType.name
+    });
+}
+
+// Update bad items and check collisions
+function updateBadItems(deltaTime) {
+    for (let i = fallingBadItems.length - 1; i >= 0; i--) {
+        const badItem = fallingBadItems[i];
+        
+        // Apply gravity
+        const effectiveGravity = stackGame.gravity * (badItem.gravityMultiplier || 1.0);
+        badItem.vy += effectiveGravity;
+        badItem.y += badItem.vy * (deltaTime / 16);
+        badItem.rotation += badItem.rotationSpeed;
+        
+        // Get the topmost level position for collision detection
+        const topY = getStackTopY();
+        
+        // Get the x position of the topmost raccoon (or base if stack is empty)
+        let topRaccoonX, topRaccoonWidth;
+        if (raccoonStack.length > 0) {
+            const topRaccoon = raccoonStack[raccoonStack.length - 1];
+            topRaccoonX = topRaccoon.x;
+            topRaccoonWidth = topRaccoon.width;
+        } else {
+            topRaccoonX = baseRaccoon.x;
+            topRaccoonWidth = baseRaccoon.width;
+        }
+        
+        // Check collision with topmost stack level only
+        if (badItem.y + badItem.height >= topY) {
+            const badItemCenterX = badItem.x + badItem.width / 2;
+            const topRaccoonCenterX = topRaccoonX + topRaccoonWidth / 2;
+            const distance = Math.abs(badItemCenterX - topRaccoonCenterX);
+            
+            // If bad item touches the topmost raccoon
+            if (distance < topRaccoonWidth * 0.8) {
+                // Remove the bad item
+                fallingBadItems.splice(i, 1);
+                
+                // Reduce stack height (remove top raccoon if any)
+                if (raccoonStack.length > 0) {
+                    raccoonStack.pop();
+                    stackGame.raccoonsStacked = raccoonStack.length;
+                    stackGame.heightReached = Math.round(raccoonStack.length * 0.5 * 10) / 10;
+                } else {
+                    // If no stack, lose a life instead
+                    stackGame.lives--;
+                    if (stackGame.lives <= 0) {
+                        stackGameOver();
+                        return;
+                    }
+                }
+                continue;
+            }
+        }
+        
+        // Bad items that miss the stack are simply removed (no life penalty)
+        if (badItem.y > stackGame.groundY + 50) {
+            fallingBadItems.splice(i, 1);
+        }
+    }
+}
+
 function renderStackGame() {
     const ctx = stackGame.ctx;
     
@@ -461,6 +596,28 @@ function renderStackGame() {
         ctx.translate(raccoon.x + raccoon.width / 2, raccoon.y + raccoon.height / 2);
         ctx.rotate(raccoon.rotation);
         drawStackRaccoon(ctx, -raccoon.width / 2, -raccoon.height / 2, raccoon.width, raccoon.height, true);
+        ctx.restore();
+    }
+    
+    // Draw falling bad items (in world coordinates, inside camera transform)
+    for (const badItem of fallingBadItems) {
+        ctx.save();
+        ctx.translate(badItem.x + badItem.width / 2, badItem.y + badItem.height / 2);
+        ctx.rotate(badItem.rotation);
+        
+        // Add red warning glow effect for bad items
+        ctx.shadowColor = '#FF0000';
+        ctx.shadowBlur = 20;
+        
+        ctx.font = `${badItem.width}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badItem.emoji, 0, 0);
+        
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        
         ctx.restore();
     }
     
