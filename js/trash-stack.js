@@ -19,11 +19,13 @@ const stackGame = {
     spawnTimer: 0,
     spawnInterval: 2500,
     minSpawnInterval: 1500,
-    initialDelay: 1500, // Delay before first raccoon spawns
+    initialDelay: 500, // Shortened delay before first raccoon spawns (was 1500)
     
     // Game stats
     raccoonsStacked: 0,
     heightReached: 0,
+    highScore: 0, // Session high score (raccoons stacked)
+    highestHeight: 0, // Session highest height reached
     lives: 3, // Player has 3 chances to miss
     
     // Physics
@@ -36,9 +38,14 @@ const stackGame = {
     wobblePhase: 0,
     maxWobble: 15,
     
-    // Bad items settings
-    badItemStartTime: 420000, // 7 minutes in milliseconds
-    gameElapsedTime: 0, // Track total game time
+    // Stack bending at 4+ meters
+    bendAmount: 0, // Current bend offset
+    bendThreshold: 4.0, // Height in meters when bending starts
+    maxBendOffset: 20, // Maximum bend offset in pixels
+    bendLagFactor: 0.08, // How slowly the bend follows movement
+    
+    // Bad items settings - now based on height (7 meters) instead of time
+    badItemStartHeight: 7.0, // Start spawning bad items at 7 meters
     badItemSpawnTimer: 0,
     badItemBaseInterval: 5000, // Base interval between bad items (5 seconds)
     badItemMinInterval: 1500, // Minimum interval at high stack heights
@@ -216,8 +223,10 @@ function startStackGame() {
     stackGame.wobbleAmount = 0;
     stackGame.wobblePhase = 0;
     
+    // Reset bend state
+    stackGame.bendAmount = 0;
+    
     // Reset bad items state
-    stackGame.gameElapsedTime = 0;
     stackGame.badItemSpawnTimer = 0;
     
     // Clear arrays
@@ -255,9 +264,6 @@ function stackGameLoop(currentTime = 0) {
 }
 
 function updateStackGame(deltaTime) {
-    // Track elapsed game time
-    stackGame.gameElapsedTime += deltaTime;
-    
     // Update wobble phase
     stackGame.wobblePhase += stackGame.wobbleSpeed * deltaTime;
     
@@ -277,7 +283,24 @@ function updateStackGame(deltaTime) {
     // Keep base raccoon in bounds
     baseRaccoon.x = Math.max(0, Math.min(stackGame.width - baseRaccoon.width, baseRaccoon.x));
     
-    // Update stacked raccoons positions (they follow the base with wobble)
+    // Update stack bending when height reaches 4+ meters
+    if (stackGame.heightReached >= stackGame.bendThreshold) {
+        // Calculate target bend based on movement direction
+        const movementDir = baseRaccoon.targetX - baseRaccoon.x;
+        const targetBend = -movementDir * 0.3; // Bend in opposite direction of movement
+        const bendFactor = Math.min(1, (stackGame.heightReached - stackGame.bendThreshold) / 4); // Increases with height
+        const maxBend = stackGame.maxBendOffset * bendFactor;
+        
+        // Clamp target bend
+        const clampedTargetBend = Math.max(-maxBend, Math.min(maxBend, targetBend));
+        
+        // Slowly interpolate bend amount (lag behind movement)
+        stackGame.bendAmount += (clampedTargetBend - stackGame.bendAmount) * stackGame.bendLagFactor;
+    } else {
+        stackGame.bendAmount = 0;
+    }
+    
+    // Update stacked raccoons positions (they follow the base with wobble and bend)
     updateStackPositions();
     
     // Update camera to follow stack
@@ -292,8 +315,8 @@ function updateStackGame(deltaTime) {
         stackGame.spawnInterval = Math.max(stackGame.minSpawnInterval, stackGame.spawnInterval - 20);
     }
     
-    // Spawn bad items after 7 minutes
-    if (stackGame.gameElapsedTime >= stackGame.badItemStartTime) {
+    // Spawn bad items after reaching 7 meters height (instead of 7 minutes time)
+    if (stackGame.heightReached >= stackGame.badItemStartHeight) {
         stackGame.badItemSpawnTimer += deltaTime;
         
         // Calculate spawn interval based on stack height (higher stack = more frequent bad items)
@@ -362,14 +385,19 @@ function getStackTopY() {
 }
 
 function updateStackPositions() {
-    // Each stacked raccoon follows the one below with slight wobble delay
+    // Each stacked raccoon follows the one below with slight wobble delay and bending
     for (let i = 0; i < raccoonStack.length; i++) {
         const stackedRaccoon = raccoonStack[i];
         const heightIndex = i + 1;
         
         // Calculate position based on base raccoon with progressive wobble
         const individualWobble = Math.sin(stackGame.wobblePhase + i * 0.3) * (stackGame.wobbleAmount * 0.3 * (i + 1) / raccoonStack.length);
-        stackedRaccoon.x = baseRaccoon.x + individualWobble;
+        
+        // Apply progressive bending - higher raccoons bend more
+        const bendProgress = (i + 1) / raccoonStack.length; // 0 to 1 from bottom to top
+        const bendOffset = stackGame.bendAmount * bendProgress * bendProgress; // Quadratic increase
+        
+        stackedRaccoon.x = baseRaccoon.x + individualWobble + bendOffset;
         stackedRaccoon.y = baseRaccoon.y - (heightIndex * baseRaccoon.height * 0.7);
         
         // Keep in bounds
@@ -550,17 +578,8 @@ function renderStackGame() {
     // Clear canvas
     ctx.clearRect(0, 0, stackGame.width, stackGame.height);
     
-    // Draw background gradient (sky that extends upward)
-    const gradient = ctx.createLinearGradient(0, 0, 0, stackGame.height);
-    gradient.addColorStop(0, '#87CEEB');
-    gradient.addColorStop(0.3, '#B0E0E6');
-    gradient.addColorStop(0.7, '#98D8C8');
-    gradient.addColorStop(1, '#87CEEB');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, stackGame.width, stackGame.height);
-    
-    // Draw clouds (parallax effect with camera)
-    drawClouds(ctx);
+    // Draw transitioning background (clouds to outer space based on height)
+    drawTransitioningBackground(ctx);
     
     // Apply camera transform
     ctx.save();
@@ -627,8 +646,92 @@ function renderStackGame() {
     drawStackHUD(ctx);
 }
 
-function drawClouds(ctx) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+// Draw background that transitions from sky with clouds to outer space
+function drawTransitioningBackground(ctx) {
+    // Calculate transition progress based on height (0 = ground, 1 = full space)
+    // Start transitioning at 5 meters, fully in space by 20 meters
+    const transitionStart = 5.0;
+    const transitionEnd = 20.0;
+    const height = stackGame.heightReached;
+    const transitionProgress = Math.min(1, Math.max(0, (height - transitionStart) / (transitionEnd - transitionStart)));
+    
+    // Sky colors
+    const skyTop = lerpColor('#87CEEB', '#0a0a2a', transitionProgress); // Light blue to dark space
+    const skyMiddle = lerpColor('#B0E0E6', '#1a1a4a', transitionProgress);
+    const skyBottom = lerpColor('#98D8C8', '#2a2a5a', transitionProgress);
+    
+    // Draw background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, stackGame.height);
+    gradient.addColorStop(0, skyTop);
+    gradient.addColorStop(0.5, skyMiddle);
+    gradient.addColorStop(1, skyBottom);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, stackGame.width, stackGame.height);
+    
+    // Draw stars (fade in as we go to space)
+    if (transitionProgress > 0) {
+        drawSpaceStars(ctx, transitionProgress);
+    }
+    
+    // Draw clouds (fade out as we go to space)
+    if (transitionProgress < 1) {
+        const cloudOpacity = 1 - transitionProgress;
+        drawClouds(ctx, cloudOpacity);
+    }
+}
+
+// Helper function to interpolate between two colors
+function lerpColor(color1, color2, t) {
+    // Parse hex colors
+    const r1 = parseInt(color1.slice(1, 3), 16);
+    const g1 = parseInt(color1.slice(3, 5), 16);
+    const b1 = parseInt(color1.slice(5, 7), 16);
+    
+    const r2 = parseInt(color2.slice(1, 3), 16);
+    const g2 = parseInt(color2.slice(3, 5), 16);
+    const b2 = parseInt(color2.slice(5, 7), 16);
+    
+    // Interpolate
+    const r = Math.round(r1 + (r2 - r1) * t);
+    const g = Math.round(g1 + (g2 - g1) * t);
+    const b = Math.round(b1 + (b2 - b1) * t);
+    
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Draw stars for space background
+function drawSpaceStars(ctx, opacity) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+    
+    // Fixed star positions for consistent appearance
+    const starPositions = [
+        [0.1, 0.1, 2], [0.3, 0.05, 1.5], [0.5, 0.15, 2.5], [0.7, 0.08, 1],
+        [0.9, 0.12, 2], [0.15, 0.25, 1.5], [0.45, 0.2, 2], [0.75, 0.22, 1],
+        [0.85, 0.18, 2.5], [0.2, 0.35, 1], [0.6, 0.3, 2], [0.95, 0.28, 1.5],
+        [0.05, 0.4, 2], [0.35, 0.45, 1], [0.55, 0.38, 2.5], [0.8, 0.42, 1.5],
+        [0.25, 0.55, 2], [0.65, 0.5, 1], [0.4, 0.6, 1.5], [0.9, 0.58, 2],
+        [0.12, 0.7, 1], [0.5, 0.68, 2], [0.72, 0.65, 1.5], [0.88, 0.75, 2.5],
+        [0.08, 0.85, 1.5], [0.32, 0.8, 2], [0.58, 0.82, 1], [0.78, 0.88, 2],
+        [0.18, 0.92, 1.5], [0.42, 0.9, 2.5], [0.68, 0.95, 1], [0.92, 0.85, 2]
+    ];
+    
+    // Add twinkling effect
+    const time = Date.now() / 1000;
+    
+    for (const [xRatio, yRatio, baseSize] of starPositions) {
+        const x = stackGame.width * xRatio;
+        const y = stackGame.height * yRatio;
+        const twinkle = 0.5 + 0.5 * Math.sin(time * 2 + xRatio * 10 + yRatio * 10);
+        const size = baseSize * (0.7 + 0.3 * twinkle);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawClouds(ctx, opacity = 1) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.8 * opacity})`;
     
     // Cloud positions that scroll with camera (parallax)
     const cloudOffsetY = stackGame.cameraY * 0.3;
@@ -837,11 +940,13 @@ function drawStackHUD(ctx) {
     ctx.textAlign = 'right';
     ctx.fillText(`${stackGame.heightReached}m`, stackGame.width - 10, 10);
     
-    // Draw wobble warning if high
-    if (stackGame.wobbleAmount > stackGame.maxWobble * 0.6) {
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚠️ WOBBLY!', stackGame.width / 2, 35);
+    // Draw high score (below raccoon count) - removed wobbly warning
+    if (stackGame.highScore > 0) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(5, 35, 100, 20);
+        ctx.fillStyle = '#FFD700';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Best: ${stackGame.highScore}🦝`, 10, 38);
     }
 }
 
@@ -849,6 +954,14 @@ function stackGameOver() {
     stackGame.isRunning = false;
     if (stackGame.animationId) {
         cancelAnimationFrame(stackGame.animationId);
+    }
+    
+    // Update high scores if current is higher
+    if (stackGame.raccoonsStacked > stackGame.highScore) {
+        stackGame.highScore = stackGame.raccoonsStacked;
+    }
+    if (stackGame.heightReached > stackGame.highestHeight) {
+        stackGame.highestHeight = stackGame.heightReached;
     }
     
     stackFinalScore.textContent = stackGame.raccoonsStacked;

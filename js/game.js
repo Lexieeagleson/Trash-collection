@@ -5,6 +5,7 @@ const game = {
     width: 0,
     height: 0,
     score: 0,
+    highScore: 0, // Session high score
     lives: 3,
     level: 1,
     isRunning: false,
@@ -29,10 +30,18 @@ const game = {
     baseTrashSpeed: 1,
     trashSpeedIncreasePerLevel: 0.15,
     maxTrashSpeed: 5,
-    // Golden sneaker settings
+    // Golden sneaker settings - spawn very infrequently
     goldenSneakerMinLevel: 10,
     goldenSneakerLastSpawnLevel: 0, // Tracks last level a golden sneaker spawned
-    goldenSneakerNextSpawnLevel: 0  // The next level at which golden sneaker will spawn
+    goldenSneakerNextSpawnLevel: 0,  // The next level at which golden sneaker will spawn
+    // Red berry settings (3x size for 10 seconds, starts at level 15)
+    redBerryMinLevel: 15,
+    redBerryLastSpawnLevel: 0,
+    redBerryNextSpawnLevel: 0,
+    // Green fish skeleton settings (shrink for 10 seconds, starts at level 18)
+    greenFishMinLevel: 18,
+    greenFishLastSpawnLevel: 0,
+    greenFishNextSpawnLevel: 0
 };
 
 // Polyfill for roundRect if not supported
@@ -62,6 +71,8 @@ const raccoon = {
     y: 0,
     width: 80,
     height: 100,
+    baseWidth: 80, // Store original width for size effects
+    baseHeight: 100, // Store original height for size effects
     targetX: 0,
     speed: 0.15,
     // Golden boost state
@@ -69,31 +80,55 @@ const raccoon = {
     goldenTimer: 0,
     goldenDuration: 15000, // 15 seconds in milliseconds
     normalSpeed: 0.15,
-    goldenSpeedMultiplier: 1.5 // 50% speed boost
+    goldenSpeedMultiplier: 1.5, // 50% speed boost
+    // Red berry effect (3x size)
+    isGiant: false,
+    giantTimer: 0,
+    giantDuration: 10000, // 10 seconds
+    giantSizeMultiplier: 3.0,
+    // Green fish effect (tiny size)
+    isTiny: false,
+    tinyTimer: 0,
+    tinyDuration: 10000, // 10 seconds
+    tinySizeMultiplier: 0.3
 };
 
 // Trash items
 let trashItems = [];
 
-// Trash types with emojis
+// Trash types - non-food items only (drawn as custom graphics)
 const trashTypes = [
-    { emoji: '🍌', points: 10 },
-    { emoji: '🥫', points: 15 },
-    { emoji: '📦', points: 20 },
-    { emoji: '🍎', points: 10 },
-    { emoji: '🥤', points: 15 },
-    { emoji: '🍕', points: 10 },
-    { emoji: '🍔', points: 15 },
-    { emoji: '🗞️', points: 20 },
-    { emoji: '🧃', points: 15 },
-    { emoji: '🥡', points: 20 }
+    { type: 'can', points: 10 },           // Aluminum can
+    { type: 'bottle', points: 15 },        // Plastic bottle
+    { type: 'box', points: 20 },           // Cardboard box
+    { type: 'newspaper', points: 10 },     // Newspaper
+    { type: 'bag', points: 15 },           // Plastic bag
+    { type: 'tire', points: 20 },          // Old tire
+    { type: 'battery', points: 15 },       // Battery
+    { type: 'shoe', points: 10 },          // Old shoe
+    { type: 'sock', points: 10 },          // Dirty sock
+    { type: 'paper', points: 15 }          // Crumpled paper
 ];
 
 // Golden sneaker (special item after level 10)
 const goldenTrashType = {
-    emoji: '👟',
+    type: 'golden_sneaker',
     points: 0,
     isGolden: true
+};
+
+// Red berry (3x size power-up after level 15)
+const redBerryType = {
+    type: 'red_berry',
+    points: 0,
+    isRedBerry: true
+};
+
+// Green fish skeleton (shrink power-up after level 18)
+const greenFishType = {
+    type: 'green_fish',
+    points: 0,
+    isGreenFish: true
 };
 
 // DOM elements
@@ -192,12 +227,29 @@ function resizeCanvas() {
 function updateRaccoonSize() {
     // Calculate raccoon size based on level (starts large, shrinks with level)
     const baseSizeForLevel = game.baseRaccoonWidth - (game.level - 1) * game.raccoonShrinkPerLevel;
-    const levelRaccoonWidth = Math.max(game.minRaccoonWidth, baseSizeForLevel);
+    let levelRaccoonWidth = Math.max(game.minRaccoonWidth, baseSizeForLevel);
     
-    // Update raccoon size (cap at configured ratio of game width)
-    raccoon.width = Math.min(levelRaccoonWidth, game.width * game.maxRaccoonWidthRatio);
+    // Apply giant effect (3x size)
+    if (raccoon.isGiant) {
+        levelRaccoonWidth *= raccoon.giantSizeMultiplier;
+    }
+    // Apply tiny effect (0.3x size)
+    else if (raccoon.isTiny) {
+        levelRaccoonWidth *= raccoon.tinySizeMultiplier;
+    }
+    
+    // Update raccoon size (cap at configured ratio of game width, unless giant)
+    if (!raccoon.isGiant) {
+        raccoon.width = Math.min(levelRaccoonWidth, game.width * game.maxRaccoonWidthRatio);
+    } else {
+        raccoon.width = Math.min(levelRaccoonWidth, game.width * 0.9); // Allow larger size when giant
+    }
     raccoon.height = raccoon.width * 1.25;
     raccoon.y = game.height - raccoon.height - 20;
+    
+    // Store base dimensions for reference
+    raccoon.baseWidth = levelRaccoonWidth;
+    raccoon.baseHeight = levelRaccoonWidth * 1.25;
 }
 
 function setupInputHandlers() {
@@ -272,13 +324,29 @@ function startGame() {
     
     // Reset golden sneaker spawning state
     game.goldenSneakerLastSpawnLevel = 0;
-    // Set first golden sneaker spawn level (level 10 + random 0-4 levels)
-    game.goldenSneakerNextSpawnLevel = game.goldenSneakerMinLevel + Math.floor(Math.random() * 5);
+    // Set first golden sneaker spawn level (level 10 + random 5-10 levels for very infrequent spawning)
+    game.goldenSneakerNextSpawnLevel = game.goldenSneakerMinLevel + Math.floor(Math.random() * 6) + 5;
+    
+    // Reset red berry spawning state
+    game.redBerryLastSpawnLevel = 0;
+    game.redBerryNextSpawnLevel = game.redBerryMinLevel + Math.floor(Math.random() * 4) + 3;
+    
+    // Reset green fish spawning state
+    game.greenFishLastSpawnLevel = 0;
+    game.greenFishNextSpawnLevel = game.greenFishMinLevel + Math.floor(Math.random() * 4) + 3;
     
     // Reset golden boost state
     raccoon.isGolden = false;
     raccoon.goldenTimer = 0;
     raccoon.speed = raccoon.normalSpeed;
+    
+    // Reset giant state
+    raccoon.isGiant = false;
+    raccoon.giantTimer = 0;
+    
+    // Reset tiny state
+    raccoon.isTiny = false;
+    raccoon.tinyTimer = 0;
     
     // Reset canvas size for level 1
     resizeCanvas();
@@ -331,6 +399,26 @@ function update(deltaTime) {
         }
     }
     
+    // Update giant effect timer
+    if (raccoon.isGiant) {
+        raccoon.giantTimer -= deltaTime;
+        if (raccoon.giantTimer <= 0) {
+            raccoon.isGiant = false;
+            raccoon.giantTimer = 0;
+            updateRaccoonSize(); // Reset size
+        }
+    }
+    
+    // Update tiny effect timer
+    if (raccoon.isTiny) {
+        raccoon.tinyTimer -= deltaTime;
+        if (raccoon.tinyTimer <= 0) {
+            raccoon.isTiny = false;
+            raccoon.tinyTimer = 0;
+            updateRaccoonSize(); // Reset size
+        }
+    }
+    
     // Smooth raccoon movement
     const dx = raccoon.targetX - raccoon.x;
     raccoon.x += dx * raccoon.speed * Math.min(deltaTime / 16, 2);
@@ -361,6 +449,14 @@ function update(deltaTime) {
             if (trash.isGolden) {
                 activateGoldenBoost();
             }
+            // Check if this is red berry (giant effect)
+            if (trash.isRedBerry) {
+                activateGiantEffect();
+            }
+            // Check if this is green fish (tiny effect)
+            if (trash.isGreenFish) {
+                activateTinyEffect();
+            }
             updateUI();
             trashItems.splice(i, 1);
             continue;
@@ -368,8 +464,8 @@ function update(deltaTime) {
         
         // Check if trash hit ground
         if (trash.y > game.height) {
-            // Golden sneakers don't remove lives when missed
-            if (!trash.isGolden) {
+            // Don't lose lives during golden period, or for special power-up items
+            if (!trash.isGolden && !trash.isRedBerry && !trash.isGreenFish && !raccoon.isGolden) {
                 game.lives--;
                 updateUI();
                 
@@ -385,24 +481,44 @@ function update(deltaTime) {
 }
 
 function spawnTrash() {
-    // Determine if this should be golden sneaker
-    // Spawns approximately once every two levels with randomized interval, starting at level 10
+    // Determine if this should be a special power-up item
     let type;
     let isGoldenTrash = false;
+    let isRedBerryTrash = false;
+    let isGreenFishTrash = false;
     
-    if (game.level >= game.goldenSneakerNextSpawnLevel && 
+    // Check for green fish skeleton spawn (level 18+, infrequent)
+    if (game.level >= game.greenFishNextSpawnLevel && 
+        game.greenFishLastSpawnLevel !== game.level) {
+        type = greenFishType;
+        isGreenFishTrash = true;
+        game.greenFishLastSpawnLevel = game.level;
+        // Set next spawn level: 5-8 levels later (infrequent)
+        game.greenFishNextSpawnLevel = game.level + 5 + Math.floor(Math.random() * 4);
+    }
+    // Check for red berry spawn (level 15+, infrequent)
+    else if (game.level >= game.redBerryNextSpawnLevel && 
+        game.redBerryLastSpawnLevel !== game.level) {
+        type = redBerryType;
+        isRedBerryTrash = true;
+        game.redBerryLastSpawnLevel = game.level;
+        // Set next spawn level: 5-8 levels later (infrequent)
+        game.redBerryNextSpawnLevel = game.level + 5 + Math.floor(Math.random() * 4);
+    }
+    // Check for golden sneaker spawn (level 10+, very infrequent)
+    else if (game.level >= game.goldenSneakerNextSpawnLevel && 
         game.goldenSneakerLastSpawnLevel !== game.level) {
-        // Spawn golden sneaker
         type = goldenTrashType;
         isGoldenTrash = true;
         game.goldenSneakerLastSpawnLevel = game.level;
-        // Set next spawn level: 3-5 levels later with randomization
-        game.goldenSneakerNextSpawnLevel = game.level + 3 + Math.floor(Math.random() * 3);
+        // Set next spawn level: 8-12 levels later (very infrequent)
+        game.goldenSneakerNextSpawnLevel = game.level + 8 + Math.floor(Math.random() * 5);
     } else {
         type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
     }
     
-    const size = isGoldenTrash ? 45 : 35 + Math.random() * 15; // Golden sneaker is slightly larger
+    const isSpecialItem = isGoldenTrash || isRedBerryTrash || isGreenFishTrash;
+    const size = isSpecialItem ? 45 : 35 + Math.random() * 15;
     
     // Calculate trash speed based on level (starts slow, increases with level)
     const levelSpeed = game.baseTrashSpeed + (game.level - 1) * game.trashSpeedIncreasePerLevel;
@@ -414,11 +530,13 @@ function spawnTrash() {
         width: size,
         height: size,
         speed: baseSpeed + Math.random() * 1,
-        emoji: type.emoji,
+        type: type.type,
         points: type.points,
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - 0.5) * 0.1,
-        isGolden: isGoldenTrash
+        isGolden: isGoldenTrash,
+        isRedBerry: isRedBerryTrash,
+        isGreenFish: isGreenFishTrash
     });
 }
 
@@ -427,6 +545,22 @@ function activateGoldenBoost() {
     raccoon.isGolden = true;
     raccoon.goldenTimer = raccoon.goldenDuration;
     raccoon.speed = raccoon.normalSpeed * raccoon.goldenSpeedMultiplier;
+}
+
+// Activate the giant effect when red berry is collected
+function activateGiantEffect() {
+    raccoon.isGiant = true;
+    raccoon.isTiny = false; // Cancel tiny effect if active
+    raccoon.giantTimer = raccoon.giantDuration;
+    updateRaccoonSize();
+}
+
+// Activate the tiny effect when green fish is collected
+function activateTinyEffect() {
+    raccoon.isTiny = true;
+    raccoon.isGiant = false; // Cancel giant effect if active
+    raccoon.tinyTimer = raccoon.tinyDuration;
+    updateRaccoonSize();
 }
 
 function checkCollision(trash) {
@@ -479,6 +613,16 @@ function render() {
         drawGoldenGlow();
     }
     
+    // Draw giant glow behind raccoon if active
+    if (raccoon.isGiant) {
+        drawGiantGlow();
+    }
+    
+    // Draw tiny glow behind raccoon if active
+    if (raccoon.isTiny) {
+        drawTinyGlow();
+    }
+    
     // Draw raccoon back (body, head, tail - behind trash can and trash items)
     drawRaccoonBack();
     
@@ -489,19 +633,23 @@ function render() {
         trash.rotation += trash.rotationSpeed;
         game.ctx.rotate(trash.rotation);
         
-        // Add golden glow effect for golden sneaker
+        // Add glow effects for special items
         if (trash.isGolden) {
             game.ctx.shadowColor = '#FFFF00';
             game.ctx.shadowBlur = 35;
+        } else if (trash.isRedBerry) {
+            game.ctx.shadowColor = '#FF0000';
+            game.ctx.shadowBlur = 40;
+        } else if (trash.isGreenFish) {
+            game.ctx.shadowColor = '#00FF00';
+            game.ctx.shadowBlur = 40;
         }
         
-        game.ctx.font = `${trash.width}px Arial`;
-        game.ctx.textAlign = 'center';
-        game.ctx.textBaseline = 'middle';
-        game.ctx.fillText(trash.emoji, 0, 0);
+        // Draw custom trash graphics
+        drawTrashItem(game.ctx, trash.type, trash.width);
         
         // Reset shadow
-        if (trash.isGolden) {
+        if (trash.isGolden || trash.isRedBerry || trash.isGreenFish) {
             game.ctx.shadowColor = 'transparent';
             game.ctx.shadowBlur = 0;
         }
@@ -548,6 +696,15 @@ function drawHUD() {
     ctx.fillStyle = 'white';
     ctx.textAlign = 'right';
     ctx.fillText(`Lives: ${game.lives}`, game.width - 10, 10);
+    
+    // Draw high score (below score)
+    if (game.highScore > 0) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(5, 35, 80, 20);
+        ctx.fillStyle = '#FFD700';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Best: ${game.highScore}`, 10, 38);
+    }
 }
 
 function drawGoldenGlow() {
@@ -579,6 +736,347 @@ function drawGoldenGlow() {
     ctx.fill();
     
     ctx.restore();
+}
+
+function drawGiantGlow() {
+    const ctx = game.ctx;
+    const x = raccoon.x;
+    const y = raccoon.y;
+    const w = raccoon.width;
+    const h = raccoon.height;
+    
+    // Create a pulsating effect based on time
+    const pulseTime = Date.now() / 150;
+    const pulseIntensity = 0.5 + 0.3 * Math.sin(pulseTime);
+    
+    // Draw red glow behind the raccoon
+    ctx.save();
+    
+    const gradient = ctx.createRadialGradient(
+        x + w / 2, y + h / 2, 0,
+        x + w / 2, y + h / 2, w * 0.9
+    );
+    gradient.addColorStop(0, `rgba(255, 0, 0, ${0.5 * pulseIntensity})`);
+    gradient.addColorStop(0.5, `rgba(255, 0, 0, ${0.25 * pulseIntensity})`);
+    gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h / 2, w * 0.9, h * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+}
+
+function drawTinyGlow() {
+    const ctx = game.ctx;
+    const x = raccoon.x;
+    const y = raccoon.y;
+    const w = raccoon.width;
+    const h = raccoon.height;
+    
+    // Create a pulsating effect based on time
+    const pulseTime = Date.now() / 150;
+    const pulseIntensity = 0.5 + 0.3 * Math.sin(pulseTime);
+    
+    // Draw green glow behind the raccoon
+    ctx.save();
+    
+    const gradient = ctx.createRadialGradient(
+        x + w / 2, y + h / 2, 0,
+        x + w / 2, y + h / 2, w * 1.5
+    );
+    gradient.addColorStop(0, `rgba(0, 255, 0, ${0.5 * pulseIntensity})`);
+    gradient.addColorStop(0.5, `rgba(0, 255, 0, ${0.25 * pulseIntensity})`);
+    gradient.addColorStop(1, 'rgba(0, 255, 0, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h / 2, w * 1.5, h * 1.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+}
+
+// Draw custom trash item graphics
+function drawTrashItem(ctx, type, size) {
+    const s = size / 2; // Half size for drawing from center
+    
+    switch(type) {
+        case 'can':
+            // Aluminum can
+            ctx.fillStyle = '#C0C0C0';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, s * 0.6, s * 0.9, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#808080';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // Top ring
+            ctx.fillStyle = '#A0A0A0';
+            ctx.beginPath();
+            ctx.ellipse(0, -s * 0.7, s * 0.5, s * 0.15, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Pull tab
+            ctx.fillStyle = '#707070';
+            ctx.beginPath();
+            ctx.ellipse(0, -s * 0.6, s * 0.2, s * 0.1, 0, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+            
+        case 'bottle':
+            // Plastic bottle
+            ctx.fillStyle = '#87CEEB';
+            ctx.globalAlpha = 0.8;
+            // Body
+            ctx.beginPath();
+            ctx.ellipse(0, s * 0.2, s * 0.5, s * 0.7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Neck
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(-s * 0.15, -s * 0.8, s * 0.3, s * 0.5);
+            // Cap
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#1E90FF';
+            ctx.fillRect(-s * 0.2, -s * 0.95, s * 0.4, s * 0.2);
+            break;
+            
+        case 'box':
+            // Cardboard box
+            ctx.fillStyle = '#D2691E';
+            ctx.fillRect(-s * 0.8, -s * 0.6, s * 1.6, s * 1.2);
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-s * 0.8, -s * 0.6, s * 1.6, s * 1.2);
+            // Tape
+            ctx.fillStyle = '#DEB887';
+            ctx.fillRect(-s * 0.1, -s * 0.6, s * 0.2, s * 1.2);
+            break;
+            
+        case 'newspaper':
+            // Newspaper
+            ctx.fillStyle = '#F5F5DC';
+            ctx.fillRect(-s * 0.7, -s * 0.5, s * 1.4, s * 1.0);
+            ctx.strokeStyle = '#808080';
+            ctx.lineWidth = 1;
+            // Text lines
+            for (let i = 0; i < 4; i++) {
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.5, -s * 0.3 + i * s * 0.2);
+                ctx.lineTo(s * 0.5, -s * 0.3 + i * s * 0.2);
+                ctx.stroke();
+            }
+            break;
+            
+        case 'bag':
+            // Plastic bag
+            ctx.fillStyle = '#FFFFFF';
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.8);
+            ctx.quadraticCurveTo(s * 0.8, -s * 0.3, s * 0.6, s * 0.8);
+            ctx.lineTo(-s * 0.6, s * 0.8);
+            ctx.quadraticCurveTo(-s * 0.8, -s * 0.3, 0, -s * 0.8);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = '#CCCCCC';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            break;
+            
+        case 'tire':
+            // Old tire
+            ctx.fillStyle = '#2F2F2F';
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1A1A1A';
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            // Tread marks
+            ctx.strokeStyle = '#3F3F3F';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(angle) * s * 0.5, Math.sin(angle) * s * 0.5);
+                ctx.lineTo(Math.cos(angle) * s * 0.75, Math.sin(angle) * s * 0.75);
+                ctx.stroke();
+            }
+            break;
+            
+        case 'battery':
+            // Battery
+            ctx.fillStyle = '#2F4F4F';
+            ctx.fillRect(-s * 0.4, -s * 0.7, s * 0.8, s * 1.4);
+            // Positive terminal
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(-s * 0.15, -s * 0.85, s * 0.3, s * 0.2);
+            // Labels
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(-s * 0.3, -s * 0.3, s * 0.6, s * 0.3);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `${s * 0.3}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('+', 0, -s * 0.15);
+            break;
+            
+        case 'shoe':
+            // Old shoe
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.ellipse(s * 0.2, 0, s * 0.7, s * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Sole
+            ctx.fillStyle = '#2F2F2F';
+            ctx.fillRect(-s * 0.4, s * 0.2, s * 1.2, s * 0.2);
+            // Laces
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.2, -s * 0.2);
+            ctx.lineTo(s * 0.2, -s * 0.2);
+            ctx.stroke();
+            break;
+            
+        case 'sock':
+            // Dirty sock
+            ctx.fillStyle = '#D3D3D3';
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.3, -s * 0.8);
+            ctx.quadraticCurveTo(-s * 0.4, s * 0.3, 0, s * 0.6);
+            ctx.quadraticCurveTo(s * 0.5, s * 0.4, s * 0.3, s * 0.1);
+            ctx.quadraticCurveTo(s * 0.2, -s * 0.3, s * 0.1, -s * 0.8);
+            ctx.closePath();
+            ctx.fill();
+            // Dirt spots
+            ctx.fillStyle = '#8B7355';
+            ctx.beginPath();
+            ctx.arc(-s * 0.1, s * 0.1, s * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(s * 0.15, s * 0.3, s * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+            
+        case 'paper':
+            // Crumpled paper
+            ctx.fillStyle = '#FFFAF0';
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.6, -s * 0.3);
+            ctx.lineTo(-s * 0.2, -s * 0.7);
+            ctx.lineTo(s * 0.4, -s * 0.5);
+            ctx.lineTo(s * 0.7, 0);
+            ctx.lineTo(s * 0.3, s * 0.6);
+            ctx.lineTo(-s * 0.3, s * 0.5);
+            ctx.lineTo(-s * 0.7, s * 0.1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#DDD';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            // Crumple lines
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.3, -s * 0.2);
+            ctx.lineTo(s * 0.2, s * 0.1);
+            ctx.stroke();
+            break;
+            
+        case 'golden_sneaker':
+            // Golden sneaker
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.ellipse(s * 0.1, 0, s * 0.8, s * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Sole
+            ctx.fillStyle = '#B8860B';
+            ctx.fillRect(-s * 0.6, s * 0.3, s * 1.4, s * 0.2);
+            // Laces
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.3, -s * 0.2);
+            ctx.lineTo(s * 0.1, -s * 0.3);
+            ctx.lineTo(s * 0.3, -s * 0.2);
+            ctx.stroke();
+            // Sparkle
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(s * 0.4, -s * 0.2, s * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+            
+        case 'red_berry':
+            // Glowing red berry
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+            // Highlight
+            ctx.fillStyle = '#FF6666';
+            ctx.beginPath();
+            ctx.arc(-s * 0.2, -s * 0.2, s * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            // Stem
+            ctx.strokeStyle = '#228B22';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.5);
+            ctx.quadraticCurveTo(s * 0.2, -s * 0.8, s * 0.3, -s * 0.7);
+            ctx.stroke();
+            // Leaf
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.ellipse(s * 0.15, -s * 0.65, s * 0.2, s * 0.1, 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+            
+        case 'green_fish':
+            // Glowing green fish skeleton
+            ctx.strokeStyle = '#00FF00';
+            ctx.fillStyle = '#00FF00';
+            ctx.lineWidth = 2;
+            // Spine
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.8, 0);
+            ctx.lineTo(s * 0.6, 0);
+            ctx.stroke();
+            // Head (skull)
+            ctx.beginPath();
+            ctx.arc(s * 0.6, 0, s * 0.25, 0, Math.PI * 2);
+            ctx.stroke();
+            // Eye socket
+            ctx.beginPath();
+            ctx.arc(s * 0.65, -s * 0.05, s * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+            // Ribs
+            for (let i = 0; i < 5; i++) {
+                const x = -s * 0.5 + i * s * 0.25;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x - s * 0.1, -s * 0.3);
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x - s * 0.1, s * 0.3);
+                ctx.stroke();
+            }
+            // Tail
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.8, 0);
+            ctx.lineTo(-s * 0.95, -s * 0.3);
+            ctx.moveTo(-s * 0.8, 0);
+            ctx.lineTo(-s * 0.95, s * 0.3);
+            ctx.stroke();
+            break;
+            
+        default:
+            // Fallback: simple circle
+            ctx.fillStyle = '#888888';
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+    }
 }
 
 function drawStars() {
@@ -892,6 +1390,11 @@ function gameOver() {
     game.isRunning = false;
     if (game.animationId) {
         cancelAnimationFrame(game.animationId);
+    }
+    
+    // Update high score if current score is higher
+    if (game.score > game.highScore) {
+        game.highScore = game.score;
     }
     
     finalScore.textContent = game.score;
